@@ -429,7 +429,7 @@ export default function RecommendedCourse() {
       zIndex: 100,
       title: text,
       icon: {
-        url: LOC_ICON_URL,
+        content: `<div style="width:28px; height:28px; background-image:url(${LOC_ICON_URL}); background-size:contain; background-repeat:no-repeat; background-position:center;"></div>`,
         size: new naver.maps.Size(28, 28),
         anchor: new naver.maps.Point(14, 28),
       },
