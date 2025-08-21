@@ -371,29 +371,6 @@ export default function RecommendedCourse() {
           mapDataControl: false,
         });
         mapRef.current = map;
-
-        // Function to toggle visibility of spot markers based on zoom level
-        const toggleSpotMarkersVisibility = () => {
-          const currentZoom = map.getZoom();
-          const SPOT_MARKER_HIDE_ZOOM_LEVEL = 6; // Hide spot markers if zoom is less than this
-          overlaysRef.current.markers.forEach(marker => {
-            // Assuming spot markers have zIndex 90, and other markers (start/goal) have 100
-            if (marker.getZIndex() === 90) {
-              if (currentZoom < SPOT_MARKER_HIDE_ZOOM_LEVEL) {
-                marker.setMap(null); // Hide marker
-              } else {
-                marker.setMap(map); // Show marker
-              }
-            }
-          });
-        };
-
-        // Add listener for zoom changes
-        naver.maps.Event.addListener(map, 'zoom_changed', toggleSpotMarkersVisibility);
-
-        // Initial check for marker visibility
-        toggleSpotMarkersVisibility();
-
       } catch (e) {
         console.error(e);
         setMsg(`지도 초기화 실패: ${e?.message || e}`);
@@ -401,10 +378,6 @@ export default function RecommendedCourse() {
     })();
     return () => {
       cancelled = true;
-      // Remove event listener when component unmounts
-      if (mapRef.current) {
-        naver.maps.Event.removeListener(mapRef.current, 'zoom_changed', toggleSpotMarkersVisibility);
-      }
       clearOverlays();
       mapRef.current = null;
     };
