@@ -88,6 +88,7 @@ const JSON_URL = "/data/course_bundles/course_simul.json";
 export default function RecommendedCourse() {
   const navigate = useNavigate();
   const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
+  const RECOMMENDED_COURSE_TITLES = ["낭만 해안도로 코스", "제주 원도심 입문", "하천과 바다가 만나는 길"];
 
   // ── 레이아웃 상수 (앱바는 화면에 없지만, 인디케이터 정렬용 가상 높이)
   const VIRTUAL_APPBAR_H = 56; // 인디케이터가 여기까지 올라오게 제한
@@ -295,6 +296,13 @@ export default function RecommendedCourse() {
             })
             .filter(Boolean);
 
+        built.sort((a, b) => {
+          const aIsRecommended = RECOMMENDED_COURSE_TITLES.includes(a.title);
+          const bIsRecommended = RECOMMENDED_COURSE_TITLES.includes(b.title);
+          if (aIsRecommended === bIsRecommended) return 0;
+          return aIsRecommended ? -1 : 1;
+        });
+
         if (!cancelled) setCourses(built);
       } catch (e) {
         console.error("코스 데이터 로딩 또는 처리 중 오류 발생:", e);
@@ -416,9 +424,16 @@ export default function RecommendedCourse() {
       zIndex: 90,
       title,
       icon: {
-        content: `<img class="marker-spot" src="${SPOT_ICON_URL}" alt="${title}" />`,
-        size: new naver.maps.Size(22, 22),
-        anchor: new naver.maps.Point(11, 11),
+        content: `
+          <div style="position: relative; width: 33px; height: 42px; text-align: center;">
+            <img class="marker-spot" src="${SPOT_ICON_URL}" alt="${title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
+            <div style="position: absolute; top: 12px; left: 0; right: 0; font-size: 10px; color: black; font-weight: bold; text-shadow: -1px 0 #fff, 0 1px #fff, 1px 0 #fff, 0 -1px #fff;">
+              ${title}
+            </div>
+          </div>
+        `,
+        size: new naver.maps.Size(33, 42),
+        anchor: new naver.maps.Point(16, 42),
       },
     });
   }
@@ -586,6 +601,10 @@ export default function RecommendedCourse() {
                 const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
                 const active = i === idx;
 
+                const isRecommended = RECOMMENDED_COURSE_TITLES.includes(course.title);
+                const badgeImage = isRecommended ? "/data/recommend-mark.png" : "/data/porpular-mark.png";
+                const badgeAlt = isRecommended ? "추천" : "인기";
+
                 return (
                     <div
                         key={course.id}
@@ -605,14 +624,7 @@ export default function RecommendedCourse() {
                         <div style={{ justifyContent: "flex-start", alignItems: "center", gap: 16, display: "flex" }}>
                           <img style={{ width: 100, height: 100, position: "relative", borderRadius: 8 }} src="https://placehold.co/100x100" />
                           <div style={{ flex: 1, flexDirection: "column", justifyContent: "flex-start", alignItems: "flex-start", gap: 4, display: "inline-flex" }}>
-                            <div style={{ paddingLeft: 3, paddingRight: 3, paddingTop: 1, paddingBottom: 1, background: "#FFDBC5", borderRadius: 3, justifyContent: "flex-start", alignItems: "center", gap: 2, display: "inline-flex" }}>
-                              <div style={{ width: 12, height: 12, position: "relative", overflow: "hidden" }}>
-                                <img style={{ width: 12, height: 12, left: 0, top: 0, position: "absolute" }} src="/badge.png" />
-                              </div>
-                              <div style={{ color: "#373D44", fontSize: 10, fontFamily: "Pretendard", fontWeight: "700", lineHeight: "16.50px", wordWrap: "break-word" }}>
-                                추천
-                              </div>
-                            </div>
+                            <img src={badgeImage} alt={badgeAlt} style={{ height: 20, objectFit: 'contain' }} />
                             <div style={{ flexDirection: "column", justifyContent: "flex-start", alignItems: "flex-start", gap: 6, display: "flex" }}>
                               <div style={{ width: 177, color: "#1E1E22", fontSize: 18, fontFamily: "Pretendard", fontWeight: "700", wordWrap: "break-word", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {course.title}
@@ -620,9 +632,6 @@ export default function RecommendedCourse() {
                               <div style={{ alignSelf: "stretch", flexDirection: "column", justifyContent: "flex-start", alignItems: "flex-start", gap: 2, display: "flex" }}>
                                 <div style={{ alignSelf: "stretch", color: "#626264", fontSize: 12, fontFamily: "Pretendard", fontWeight: "500", wordWrap: "break-word" }}>
                                   {course.desc1}
-                                </div>
-                                <div style={{ color: "#626264", fontSize: 12, fontFamily: "Pretendard", fontWeight: "500", wordWrap: "break-word" }}>
-                                  {course.desc2}
                                 </div>
                               </div>
                               <div style={{ justifyContent: "flex-start", alignItems: "flex-start", gap: 4, display: "inline-flex" }}>
