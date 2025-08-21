@@ -12,6 +12,7 @@ import OnboardingFlow from "./page/onboarding/OnboardingFlow";
 import StoryRepliesRoute from "./page/Camera/StoryRepliesRoute";
 import RunningPage from "./page/RunningPage.jsx";
 import StoryFeedPage from "./page/Camera/StoryFeedPage.jsx";
+import RunResultCarousel from "./page/RunResultCarousel.jsx";
 
 // 홈: 1열 리스트 버튼
 function Home() {
@@ -162,7 +163,8 @@ export default function App() {
       <Route path="/recommend" element={<RecommendedCourse />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/gps" element={<GpsPage />} />
-      <Route path="/finish_run" element={<FinishRunningPage />} />
+      <Route path="/finish_run" element={<RunResultCarousel />} />
+      <Route path="/run-result" element={<RunResultCarousel />} />
       <Route path="/story-feed" element={<StoryFeedPage />} />
       <Route path="/onboard" element={<OnboardingFlow />} />
       <Route path="/mission" element={<MissionCertificate />} />
