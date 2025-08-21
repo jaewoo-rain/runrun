@@ -1,0 +1,288 @@
+:root {
+  --main: #ff8c42;
+  --bg: #f8f8f8;
+  --ink: #1e1e22;
+  --muted: #626264;
+  --card: #ffffff;
+  --shadow: 0px 2px 46px rgba(0, 0, 0, 0.08);
+  --card-w: 308px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 화면 전체를 뷰포트로 채움 (고정 360x800 제거) */
+.screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh; /* 모바일 주소창 변화 대응 */
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ───────── AppBar */
+.appbar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 70px;
+  background: #1e1e22;
+  color: #fff;
+  box-shadow: 0 2px 46px rgba(0, 0, 0, 0.13);
+  z-index: 5;
+}
+.appbar-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 25px;
+  text-align: center;
+  font-family: Pretendard, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* ───────── Map */
+.map-container {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 70px;
+  bottom: 12px; /* 아래 캐러셀과 겹쳐 보여도 OK (지도 넓게) */
+}
+
+/* 지도 위 토스트 */
+.floating-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100px;
+  z-index: 6;
+  pointer-events: none;
+}
+.toast {
+  margin: 0 auto 10px;
+  width: fit-content;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+/* ───────── 지도 마커(이미지+라벨) */
+.marker-with-label {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+.marker-loc {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+.marker-label {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--main, #ff8c42);
+  text-shadow: 0 1px 0 #fff, 0 0 3px #fff;
+}
+.marker-with-label.left .marker-label {
+  right: 36px;
+}
+.marker-with-label.right .marker-label {
+  left: 36px;
+}
+.marker-spot {
+  width: 33px;
+  height: 42px;
+  display: block;
+}
+
+.guide-dot {
+  width: 10px;
+  height: 10px;
+  background: #111;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+/* ───────── Carousel (네이티브 스크롤) */
+.carousel-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 50px); /* 세이프에어리어 대응 */
+  height: 170px;
+  display: flex;
+  align-items: center;
+  z-index: 6;
+}
+.carousel {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 12px 12px;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: none; /* 스냅은 JS로 처리 */
+  touch-action: pan-x; /* 가로 스크롤 제스처 */
+}
+/* 스크롤바 숨김 */
+.carousel {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.card-click-wrap {
+  flex: 0 0 var(--card-w);
+}
+.end-spacer {
+  flex: 0 0 16px;
+}
+
+/* ───────── CourseCard */
+.course-card {
+  width: 308px;
+  margin-bottom: 30px;
+  padding: 16px 20px;
+  background: #fcfcfc;
+  box-shadow: 2px 5px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 18px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  outline: none;
+  user-select: none;
+  cursor: default; /* 카드 자체는 클릭 없음 */
+  transition: outline-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
+}
+.course-card.active {
+  /* outline: 2px solid var(--main); */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px) scale(1.08);
+  z-index: 2;
+}
+
+.cc-head {
+  width: 270px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cc-thumb {
+  width: 100px;
+  height: 100px;
+  background: #c4c4c6;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.cc-meta {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cc-title {
+  width: 177px;
+  color: #1e1e22;
+  font-size: 18px;
+  font-weight: 700;
+}
+.cc-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #626264;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cc-level {
+  height: 24px;
+  padding: 0 8px;
+  background: #ffdbc5;
+  border-radius: 4px;
+  outline: 1px var(--main) solid;
+  outline-offset: -1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cc-level span {
+  color: var(--main);
+  font-size: 11px;
+  font-weight: 400;
+}
+.cc-dist {
+  color: #626264;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.divider {
+  width: 270px;
+  height: 1px;
+  background: #f0f0f2;
+}
+
+.cc-bottom {
+  width: 280px;
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+}
+.cc-spot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.cc-spot-icon {
+  width: 18px;
+  height: 18px;
+  background: #1e1e22;
+  border-radius: 50%;
+  position: relative;
+}
+.cc-spot-icon::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  background: #fcfcfc;
+  border-radius: 2px;
+}
+.cc-spot-name {
+  color: #1e1e22;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cc-run-btn {
+  width: 108px;
+  height: 42px;
+  background: var(--main);
+  color: #fcfcfc;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  margin-left: auto;
+  cursor: pointer;
+}

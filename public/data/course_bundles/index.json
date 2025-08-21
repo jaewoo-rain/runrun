@@ -1,0 +1,230 @@
+{
+  "generated_at": "2025-08-18T18:55:20.511129Z",
+  "out_dir": "C:\\Users\\USER\\Desktop\\mindmap\\server\\python\\course_bundles",
+  "courses": [
+    {
+      "course": "1-1",
+      "file": "course_1-1.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 4,
+      "guide_points": 8
+    },
+    {
+      "course": "10",
+      "file": "course_10.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 8,
+      "guide_points": 8
+    },
+    {
+      "course": "10-1",
+      "file": "course_10-1.json",
+      "segments": 4,
+      "lines": 4,
+      "spots": 6,
+      "guide_points": 6
+    },
+    {
+      "course": "11",
+      "file": "course_11.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 7,
+      "guide_points": 8
+    },
+    {
+      "course": "12",
+      "file": "course_12.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 10,
+      "guide_points": 8
+    },
+    {
+      "course": "13",
+      "file": "course_13.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 9,
+      "guide_points": 7
+    },
+    {
+      "course": "14",
+      "file": "course_14.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 9,
+      "guide_points": 8
+    },
+    {
+      "course": "14-1",
+      "file": "course_14-1.json",
+      "segments": 4,
+      "lines": 4,
+      "spots": 7,
+      "guide_points": 6
+    },
+    {
+      "course": "15-A",
+      "file": "course_15-A.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 10,
+      "guide_points": 8
+    },
+    {
+      "course": "15-B",
+      "file": "course_15-B.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 8,
+      "guide_points": 7
+    },
+    {
+      "course": "16",
+      "file": "course_16.json",
+      "segments": 5,
+      "lines": 5,
+      "spots": 9,
+      "guide_points": 7
+    },
+    {
+      "course": "17",
+      "file": "course_17.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 10,
+      "guide_points": 8
+    },
+    {
+      "course": "18",
+      "file": "course_18.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 9,
+      "guide_points": 8
+    },
+    {
+      "course": "18-1",
+      "file": "course_18-1.json",
+      "segments": 3,
+      "lines": 3,
+      "spots": 6,
+      "guide_points": 6
+    },
+    {
+      "course": "18-2",
+      "file": "course_18-2.json",
+      "segments": 4,
+      "lines": 4,
+      "spots": 4,
+      "guide_points": 6
+    },
+    {
+      "course": "19",
+      "file": "course_19.json",
+      "segments": 5,
+      "lines": 5,
+      "spots": 4,
+      "guide_points": 6
+    },
+    {
+      "course": "2",
+      "file": "course_2.json",
+      "segments": 5,
+      "lines": 5,
+      "spots": 9,
+      "guide_points": 7
+    },
+    {
+      "course": "20",
+      "file": "course_20.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 6,
+      "guide_points": 8
+    },
+    {
+      "course": "21",
+      "file": "course_21.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 6,
+      "guide_points": 7
+    },
+    {
+      "course": "3-A",
+      "file": "course_3-A.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 13,
+      "guide_points": 8
+    },
+    {
+      "course": "3-B",
+      "file": "course_3-B.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 13,
+      "guide_points": 8
+    },
+    {
+      "course": "4",
+      "file": "course_4.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 10,
+      "guide_points": 8
+    },
+    {
+      "course": "5",
+      "file": "course_5.json",
+      "segments": 7,
+      "lines": 7,
+      "spots": 10,
+      "guide_points": 8
+    },
+    {
+      "course": "6",
+      "file": "course_6.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 10,
+      "guide_points": 7
+    },
+    {
+      "course": "7",
+      "file": "course_7.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 10,
+      "guide_points": 7
+    },
+    {
+      "course": "7-1",
+      "file": "course_7-1.json",
+      "segments": 4,
+      "lines": 4,
+      "spots": 7,
+      "guide_points": 6
+    },
+    {
+      "course": "8",
+      "file": "course_8.json",
+      "segments": 6,
+      "lines": 6,
+      "spots": 7,
+      "guide_points": 7
+    },
+    {
+      "course": "9",
+      "file": "course_9.json",
+      "segments": 3,
+      "lines": 3,
+      "spots": 6,
+      "guide_points": 5
+    }
+  ]
+}
