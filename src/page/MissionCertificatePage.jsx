@@ -1,7 +1,44 @@
 // src/MissionCertificate.jsx
 import React from "react";
 
-export default function MissionCertificate({ data }) {
+const CarouselDots = ({ activeSlide, scrollToSlide }) => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      gap: 10,
+      padding: "10px",
+      position: "absolute", // Position absolutely
+      bottom: "40px", // Match vertical position with FinishRunningPage
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 10, // Ensure it's on top
+    }}
+  >
+    <div
+      onClick={() => scrollToSlide(0)}
+      style={{
+        width: 10,
+        height: 10,
+        background: activeSlide === 0 ? "#FF8C42" : "#C4C4C6", // Orange for active, gray for inactive
+        borderRadius: "50%",
+        cursor: "pointer",
+      }}
+    />
+    <div
+      onClick={() => scrollToSlide(1)}
+      style={{
+        width: 10,
+        height: 10,
+        background: activeSlide === 1 ? "#FF8C42" : "#C4C4C6",
+        borderRadius: "50%",
+        cursor: "pointer",
+      }}
+    />
+  </div>
+);
+
+export default function MissionCertificate({ data, activeSlide, scrollToSlide }) {
   const { distance, courseTitle } = data || {
     distance: 0,
     courseTitle: "코스",
