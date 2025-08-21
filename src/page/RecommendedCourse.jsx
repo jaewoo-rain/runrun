@@ -453,7 +453,7 @@ export default function RecommendedCourse() {
         content: `
           <div style="position: relative; width: 33px; height: 42px; text-align: center;">
             <img class="marker-spot" src="${SPOT_ICON_URL}" alt="${title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
-            <div style="position: absolute; top: 12px; left: 0; right: 0; font-size: 10px; color: black; font-weight: bold; text-shadow: -1px 0 #fff, 0 1px #fff, 1px 0 #fff, 0 -1px #fff;">
+            <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 12px; color: black; font-weight: bold; white-space: nowrap;">
               ${title}
             </div>
           </div>
