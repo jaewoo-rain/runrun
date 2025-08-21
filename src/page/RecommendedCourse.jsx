@@ -74,8 +74,27 @@ async function fetchTmapPedestrian({
 }
 
 const LOC_ICON_URL = "/location.png";
-const SPOT_ICON_URL = "/spot.png";
 const JSON_URL = "/data/course_bundles/course_simul.json";
+
+// Hardcoded list of image paths from public/image/
+const IMAGE_PATHS = [
+  "/image/광령교.jpg",
+  "/image/김만덕.jpg",
+  "/image/닭머르.jpg",
+  "/image/별도봉.jpeg",
+  "/image/어영소공원.jpg",
+  "/image/연북정.jpg",
+  "/image/외도월대.jpg",
+  "/image/용두암.jpeg",
+  "/image/용연구름다리.jpg",
+  "/image/이호테우.jpeg",
+];
+
+// Function to get a random image path
+function getRandomImagePath() {
+  const randomIndex = Math.floor(Math.random() * IMAGE_PATHS.length);
+  return IMAGE_PATHS[randomIndex];
+}
 
 export default function RecommendedCourse() {
   const navigate = useNavigate();
@@ -348,10 +367,33 @@ export default function RecommendedCourse() {
         const map = new naver.maps.Map(mapContainerRef.current, {
           center: new naver.maps.LatLng(33.27, 126.67),
           zoom: 13,
-          logoControl: true,
+          logoControl: false,
           mapDataControl: false,
         });
         mapRef.current = map;
+
+        // Function to toggle visibility of spot markers based on zoom level
+        const toggleSpotMarkersVisibility = () => {
+          const currentZoom = map.getZoom();
+          const SPOT_MARKER_HIDE_ZOOM_LEVEL = 6; // Hide spot markers if zoom is less than this
+          overlaysRef.current.markers.forEach(marker => {
+            // Assuming spot markers have zIndex 90, and other markers (start/goal) have 100
+            if (marker.getZIndex() === 90) {
+              if (currentZoom < SPOT_MARKER_HIDE_ZOOM_LEVEL) {
+                marker.setMap(null); // Hide marker
+              } else {
+                marker.setMap(map); // Show marker
+              }
+            }
+          });
+        };
+
+        // Add listener for zoom changes
+        naver.maps.Event.addListener(map, 'zoom_changed', toggleSpotMarkersVisibility);
+
+        // Initial check for marker visibility
+        toggleSpotMarkersVisibility();
+
       } catch (e) {
         console.error(e);
         setMsg(`지도 초기화 실패: ${e?.message || e}`);
@@ -359,6 +401,10 @@ export default function RecommendedCourse() {
     })();
     return () => {
       cancelled = true;
+      // Remove event listener when component unmounts
+      if (mapRef.current) {
+        naver.maps.Event.removeListener(mapRef.current, 'zoom_changed', toggleSpotMarkersVisibility);
+      }
       clearOverlays();
       mapRef.current = null;
     };
@@ -452,7 +498,7 @@ export default function RecommendedCourse() {
       icon: {
         content: `
           <div style="position: relative; width: 33px; height: 42px; text-align: center;">
-            <img class="marker-spot" src="${SPOT_ICON_URL}" alt="${title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
+            <img class="marker-spot" src="${getRandomImagePath()}" alt="${title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
             <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 12px; color: black; font-weight: bold; white-space: nowrap;">
               ${title}
             </div>
@@ -680,15 +726,56 @@ export default function RecommendedCourse() {
                         display: "flex",
                       }}
                     >
-                      <img
-                        style={{
-                          width: 100,
-                          height: 100,
-                          position: "relative",
-                          borderRadius: 8,
-                        }}
-                        src="https://placehold.co/100x100"
-                      />
+                      {/* Image selection logic for course thumbnails */}
+                      {/*
+                        TODO: Add more specific images for each course if available.
+                        Currently, 'jeju.png' is used for '제주 원도심 입문',
+                        and 'photoshoot.png' is used as a generic placeholder for others.
+                        Note: 'public/data/image 36.png' has a space in its filename, which is generally not recommended for web assets.
+                      */}
+                      {(() => {
+                        let imagePath = "/photoshoot.png"; // Default generic image
+                        switch (course.title) {
+                          case "월대에서 용두암까지":
+                            imagePath = "/image/용두암.jpeg";
+                            break;
+                          case "낭만 해안도로 코스":
+                            imagePath = "/image/이호테우.jpeg";
+                            break;
+                          case "용담 해안도로 챌린지":
+                            imagePath = "/image/외도월대.jpg";
+                            break;
+                          case "제주 원도심 입문":
+                            imagePath = "/image/김만덕.jpg";
+                            break;
+                          case "신촌리 바닷길":
+                            imagePath = "/image/닭머르.jpg";
+                            break;
+                          case "하천과 바다가 만나는 길":
+                            imagePath = "/image/광령교.jpg";
+                            break;
+                          case "조천 바다 조망 코스":
+                            imagePath = "/image/연북정.jpg";
+                            break;
+                          case "숲과 바다를 한번에":
+                            imagePath = "/image/별도봉.jpeg";
+                            break;
+                          case "17코스 시작 챌린지":
+                            imagePath = "/image/어영소공원.jpg";
+                            break;
+                        }
+                        return (
+                          <img
+                            style={{
+                              width: 100,
+                              height: 100,
+                              position: "relative",
+                              borderRadius: 8,
+                            }}
+                            src={imagePath}
+                          />
+                        );
+                      })()}
                       <div
                         style={{
                           flex: 1,
