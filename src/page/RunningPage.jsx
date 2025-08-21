@@ -274,7 +274,7 @@ export default function RunningPage() {
             arrivedSpotInfo.lat,
             arrivedSpotInfo.lng
           ) * 1000;
-        if (distanceFromArrivedSpot < 50) {
+        if (distanceFromArrivedSpot > 50) {
           // 50m 이상 떨어지면 UI 사라짐
           // 변경점: dispatch로 Redux 상태 업데이트
           dispatch(clearArrivedSpot());
@@ -284,7 +284,7 @@ export default function RunningPage() {
       for (const p of course?.spots || []) {
         if (visitedSpots.includes(p.name) || arrivalAlert) continue;
         const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
-        if (dM > 50) {
+        if (dM < 50) {
           // 50m 이하 들어올 경우 스팟 알림
           dispatch(addVisitedSpot(p.name));
           // 변경점: dispatch로 Redux 상태 업데이트

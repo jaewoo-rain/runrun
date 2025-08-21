@@ -416,7 +416,7 @@ export default function RecommendedCourse() {
             start.lat,
             start.lng
           ) * 1000;
-        if (d >= 100) {
+        if (d <= 100) {
           setAlertComponent(
             <AlertStart
               onClose={() => setAlertComponent(null)}
