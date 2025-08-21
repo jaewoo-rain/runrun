@@ -1,19 +1,26 @@
 // src/MissionCertificate.jsx
 import React from "react";
 
-export default function MissionCertificate() {
+export default function MissionCertificate({ data }) {
+  const { distance, courseTitle } = data || {
+    distance: 0,
+    courseTitle: "코스",
+  };
+
   return (
     <div
       style={{
         width: 360,
-        height: 800,
+        height: "100%",
+        maxHeight: 800,
         position: "relative",
         background: "#1E1E22",
         overflow: "hidden",
-        backgroundImage: "url('/mission.png')", // public/mission.png
+        backgroundImage: "url('/mission.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        margin: "20px auto",
+        margin: "0 auto",
+        boxSizing: "border-box",
       }}
     >
       {/* 텍스트 영역 */}
@@ -44,8 +51,8 @@ export default function MissionCertificate() {
           lineHeight: "23.04px",
         }}
       >
-        함덕해수욕장부터, <br />
-        20km 를 완주한 당신
+        {courseTitle}부터, <br />
+        {distance.toFixed(2)}km 를 완주한 당신
         <br />
         제주도가 임명하는 ‘해돋이러너’로 임명합니다!
       </div>

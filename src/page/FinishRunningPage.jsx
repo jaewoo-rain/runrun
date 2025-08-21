@@ -255,9 +255,8 @@ const ImageCarousel = ({ userPath }) => {
   );
 };
 
-export default function FinishRunningPage() {
-  const location = useLocation();
-  const { elapsedTime, distance, calories, pace, userPath, courseTitle } = location.state || {
+export default function FinishRunningPage({ data }) {
+  const { elapsedTime, distance, calories, pace, userPath, courseTitle } = data || {
     elapsedTime: 0,
     distance: 0,
     calories: 0,
@@ -274,32 +273,30 @@ export default function FinishRunningPage() {
     <div
       style={{
         width: 360,
-        height: 800,
-        position: "relative",
+        height: "100%",
         background: "white",
-        overflow: "hidden",
-        margin: "20px auto",
+        overflowY: "auto",
+        margin: "0 auto",
+        boxSizing: "border-box",
       }}
     >
       {/* 본문 */}
       <div
         style={{
-          width: 328,
-          left: 16,
-          top: 62,
-          position: "absolute",
+          padding: "20px 16px 120px 16px", // 하단바 영역 확보
           display: "flex",
           flexDirection: "column",
-          alignItems: "flex-start",
+          alignItems: "center", // 전체 중앙 정렬
           gap: 26,
         }}
       >
         {/* 코스 정보 */}
         <div
           style={{
-            width: 328, // Use full width to align left
+            width: "100%",
             display: "flex",
             flexDirection: "column",
+            alignItems: "flex-start", // 내용은 좌측 정렬
             gap: 12,
           }}
         >
@@ -356,13 +353,14 @@ export default function FinishRunningPage() {
           </div>
         </div>
 
-        {/* 지도 & 이미지 */}
-        <ImageCarousel userPath={userPath} />
+        {/* 지도 */}
+        <div style={{ width: 328, height: 328 }}>
+          <ResultMap userPath={userPath} />
+        </div>
 
         {/* 버튼 영역 */}
         <div
           style={{
-            alignSelf: "center",
             width: 206,
             paddingLeft: 12,
             paddingRight: 12,
@@ -374,6 +372,7 @@ export default function FinishRunningPage() {
             alignItems: "center",
             gap: 9.6,
             display: "inline-flex",
+            cursor: "pointer",
           }}
         >
           <div
@@ -390,8 +389,6 @@ export default function FinishRunningPage() {
           </div>
         </div>
       </div>
-
-      <BottomBar activeTab="running" positioning="absolute" />
     </div>
   );
 }

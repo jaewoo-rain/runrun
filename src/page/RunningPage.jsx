@@ -301,7 +301,7 @@ export default function RunningPage() {
 
   const handleEndRunning = () => {
     setShowEndAlert(false);
-    navigate("/finish_run", {
+    navigate("/run-result", {
       state: {
         elapsedTime,
         distance,
