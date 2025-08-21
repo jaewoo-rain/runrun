@@ -81,100 +81,12 @@ function estimateTimeStr(km, pace = paceMinPerKm) {
   const m = minutes % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
-function levelByDistance(km) {
-  if (km < 5) return "초급";
-  if (km < 10) return "중급";
-  return "상급";
-}
 
-// ────────────────────────────────────────────────
-// 카드 (버튼만 클릭 가능, 활성 클래스 적용)
-function CourseCard({ course, onRun, active }) {
-  const distKm = useMemo(() => {
-    return getDistanceFromLatLonInKm(
-      course.origin.lat,
-      course.origin.lng,
-      course.dest.lat,
-      course.dest.lng
-    );
-  }, [course]);
-
-  const level = levelByDistance(distKm);
-  const timeStr = estimateTimeStr(distKm);
-
-  return (
-    <div
-      className={`course-card${active ? " active" : ""}`}
-      aria-current={active ? "true" : "false"}
-    >
-      <div className="cc-head">
-        <div className="cc-thumb" />
-        <div className="cc-meta">
-          <div className="cc-title">{course.title}</div>
-
-          <div className="cc-desc">
-            <div>{course.desc1}</div>
-            <div>{course.desc2}</div>
-          </div>
-
-          <div className="cc-row">
-            <div className="cc-level">
-              <span>{level}</span>
-            </div>
-            <div className="cc-dist">
-              {distKm.toFixed(2)}km · 예상시간 {timeStr}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="divider" />
-
-      <div className="cc-bottom">
-        {(course.spots || []).slice(0, 2).map((s) => (
-          <div key={s.name} className="cc-spot">
-            <div className="cc-spot-icon" />
-            <div className="cc-spot-name">{s.name}</div>
-          </div>
-        ))}
-
-        <button type="button" className="cc-run-btn" onClick={onRun}>
-          코스 달리기
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ────────────────────────────────────────────────
 const LOC_ICON_URL = "/location.png"; // public/location.png
 const SPOT_ICON_URL = "/spot.png"; // public/spot.png
-const JSON_URL = "/data/course_bundles/course_5.json";
-
-// 하드코딩으로 선택할 라인들(스팟 포함되는 라인)
-const COURSES = [
-  {
-    id: 3,
-    title: "남원 바닷길 러닝",
-    desc1: "남원용암해수풀장에서,",
-    desc2: "큰엉까지 잔잔한 오션뷰",
-    spotNames: ["남원용암해수풀장", "큰엉입구"], // 출/도착(표시용 이름)
-  },
-  {
-    id: 2,
-    title: "위미 동백 코스",
-    desc1: "위미 바닷가에서,",
-    desc2: "세천포구까지 포토스팟",
-    spotNames: ["위미 동백나무 군락지", "세천포구"],
-  },
-  {
-    id: 4,
-    title: "망장포–쇠소깍",
-    desc1: "망장포에서,",
-    desc2: "쇠소깍다리까지 완만한 코스",
-    spotNames: ["망장포", "쇠소깍다리"],
-  },
-];
+const JSON_URL = "/data/course_bundles/course_simul.json";
 
 export default function RecommendedCourse() {
   const navigate = useNavigate();
@@ -198,189 +110,114 @@ export default function RecommendedCourse() {
   const mapRef = useRef(null);
   const overlaysRef = useRef({ markers: [], polylines: [] });
 
-  // 캐러셀(네이티브 스크롤 + 부드러운 스냅)
-  const sliderRef = useRef(null);
-  const CARD_W = 308;
-  const GAP = 12;
+  
 
-  // 가운데 스냅 계산
-  const step = () => CARD_W + GAP;
-  const padL = () =>
-    sliderRef.current
-      ? parseFloat(getComputedStyle(sliderRef.current).paddingLeft) || 0
-      : 0;
-
-  const getTargetLeft = (i) => {
-    const el = sliderRef.current;
-    if (!el) return 0;
-    return i * step() - (el.clientWidth - CARD_W) / 2 + padL();
-  };
-
-  const currentIndexByCenter = () => {
-    const el = sliderRef.current;
-    if (!el) return 0;
-    const centerAdjusted =
-      el.scrollLeft - padL() + (el.clientWidth - CARD_W) / 2;
-    return Math.round(centerAdjusted / step());
-  };
-
-  // 이징 애니메이션
-  const animRef = useRef({ raf: 0 });
-  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-  const cancelAnim = () => {
-    if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
-    animRef.current.raf = 0;
-  };
-  const animateTo = (left, duration = 420) => {
-    const el = sliderRef.current;
-    if (!el) return;
-    cancelAnim();
-    const from = el.scrollLeft;
-    const to = Math.max(0, left);
-    const start = performance.now();
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      el.scrollLeft = from + (to - from) * easeOutCubic(t);
-      if (t < 1) animRef.current.raf = requestAnimationFrame(tick);
-      else animRef.current.raf = 0;
-    };
-    animRef.current.raf = requestAnimationFrame(tick);
-  };
-
-  const centerToIndex = (i, withAnim = true) => {
-    const left = getTargetLeft(i);
-    if (!sliderRef.current) return;
-    withAnim ? animateTo(left) : (sliderRef.current.scrollLeft = left);
-  };
-
-  const snapToNearest = () => {
-    if (!sliderRef.current || courses.length === 0) return;
-    const target = Math.max(
-      0,
-      Math.min(currentIndexByCenter(), courses.length - 1)
-    );
-    setIdx(target);
-    centerToIndex(target, true);
-  };
-
-  // 스크롤 중 active 동기화 + 멈춤 감지로 스냅
-  const idleTimer = useRef(null);
-  const onSliderScroll = () => {
-    if (!sliderRef.current || courses.length === 0) return;
-    setIdx((prev) => {
-      const i = currentIndexByCenter();
-      return i !== prev ? i : prev;
-    });
-    clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => {
-      if (!animRef.current.raf) snapToNearest();
-    }, 90);
-  };
-
-  // ── JSON 로딩 → 라인 3개를 코스로 구성 (+ 경로 중간 스팟 2개만 뽑기: 시작/끝 제외)
+  // ── JSON 로딩
   useEffect(() => {
     let cancelled = false;
-
-    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-    const tooCloseM = (a, b, m = 80) =>
-      getDistanceFromLatLonInKm(a.lat, a.lng, b.lat, b.lng) * 1000 < m;
 
     (async () => {
       try {
         const res = await fetch(JSON_URL);
+        if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
         const data = await res.json();
+        if (cancelled) return;
 
-        const built = COURSES.map((course) => {
-          const line = (data.lines || [])[course.id];
-          if (!Array.isArray(line) || line.length < 2) return null;
+        const recommendedCourses = data["specific-course"]?.[0];
+        const segments = data.segments;
 
-          // 출발/도착 좌표
-          const first = line[0]; // [lng, lat]
-          const last = line[line.length - 1];
+        if (!recommendedCourses || !segments) {
+          throw new Error("Invalid data structure in JSON file.");
+        }
 
-          const origin = {
-            name: course.spotNames?.[0] || "출발지",
-            lat: first[1],
-            lng: first[0],
-          };
-          const dest = {
-            name: course.spotNames?.[1] || "도착지",
-            lat: last[1],
-            lng: last[0],
-          };
+        // Create a lookup map for segments by their ID for efficient access
+        const segmentMap = segments.reduce((acc, segment) => {
+          acc[segment.id] = segment;
+          return acc;
+        }, {});
 
-          // JSON에 line_mid_spots가 있으면 우선 사용
-          let midsFromFile =
-            data.line_mid_spots?.[String(course.id)]?.map((s) => ({
-              name: s.name,
-              lat: s.lat,
-              lng: s.lng,
-            })) ?? [];
-
-          // 폴백: 라인 기반 자동 산출(33%, 50%, 66% 후보 중 2개 선택)
-          const autoMid = () => {
-            const picks = [0.33, 0.5, 0.66]
-              .map((t) =>
-                clamp(Math.floor(line.length * t), 5, line.length - 6)
-              )
-              .filter((v, i, arr) => arr.indexOf(v) === i);
-            const result = [];
-            for (const idx of picks) {
-              const [lng, lat] = line[idx];
-              const cand = {
-                name: `중간 스팟 ${result.length + 1}`,
-                lat,
-                lng,
-              };
-              if (
-                !tooCloseM(cand, origin) &&
-                !tooCloseM(cand, dest) &&
-                result.every((r) => !tooCloseM(cand, r, 50))
-              ) {
-                result.push(cand);
-              }
-              if (result.length === 2) break;
+        const built = Object.values(recommendedCourses)
+          .map((course) => {
+            const segmentIds = course.path; // e.g., ["17-2", "17-3"]
+            if (!Array.isArray(segmentIds) || segmentIds.length === 0) {
+              console.warn(`Course "${course.title}" has no path segments.`);
+              return null;
             }
-            // 혹시 부족하면 중앙 쪽에서 보충
-            if (result.length < 2) {
-              const midIdx = clamp(
-                Math.floor(line.length * 0.5),
-                5,
-                line.length - 6
+
+            // Collect path, spots, and distance from all segments
+            let fullPath = [];
+            let allSpots = [];
+            let totalDistanceMeters = 0;
+
+            for (const segmentId of segmentIds) {
+              const segment = segmentMap[segmentId];
+              if (segment) {
+                // segment.path is [[lng, lat], ...]
+                fullPath = fullPath.concat(segment.path);
+                if (Array.isArray(segment.spot)) {
+                  allSpots = allSpots.concat(segment.spot);
+                }
+                if (segment.summary?.totalDistance) {
+                  totalDistanceMeters += segment.summary.totalDistance;
+                }
+              } else {
+                console.warn(
+                  `Segment with id "${segmentId}" not found for course "${course.title}".`
+                );
+              }
+            }
+
+            if (fullPath.length < 2) {
+              console.warn(
+                `Course "${course.title}" has an invalid path after processing segments.`
               );
-              const [lng, lat] = line[midIdx];
-              const cand = { name: `중간 스팟 ${result.length + 1}`, lat, lng };
-              if (
-                !tooCloseM(cand, origin) &&
-                !tooCloseM(cand, dest) &&
-                result.every((r) => !tooCloseM(cand, r, 50))
-              ) {
-                result.push(cand);
-              }
+              return null;
             }
-            return result.slice(0, 2);
-          };
 
-          let midSpots = (midsFromFile.length >= 2 ? midsFromFile : autoMid())
-            // 시작/끝과 너무 가까운 것은 제외
-            .filter((m) => !tooCloseM(m, origin) && !tooCloseM(m, dest))
-            .slice(0, 2);
+            const firstCoord = fullPath[0];
+            const lastCoord = fullPath[fullPath.length - 1];
 
-          return {
-            id: `course_5_${course.id}`,
-            title: course.title,
-            desc1: course.desc1,
-            desc2: course.desc2,
-            origin,
-            dest,
-            spots: midSpots, // ★ 중간 스팟만
-            path: line.map(([lng, lat]) => ({ lat, lng })),
-          };
-        }).filter(Boolean);
+            const origin = {
+              name: "출발지",
+              lat: firstCoord[1],
+              lng: firstCoord[0],
+            };
+            const dest = {
+              name: "도착지",
+              lat: lastCoord[1],
+              lng: lastCoord[0],
+            };
 
-        if (!cancelled) setCourses(built);
+            // Extract up to 2 spots
+            const midSpots = allSpots
+              .map((p) => ({
+                name: p.VISIT_AREA_NM,
+                lat: p.Y_COORD,
+                lng: p.X_COORD,
+              }))
+              .slice(0, 2);
+
+            const totalKm = totalDistanceMeters / 1000;
+
+            return {
+              id: segmentIds.join("_"), // Create a unique ID from segment IDs
+              title: course.title,
+              desc1: course.description,
+              desc2: `거리: ${totalKm.toFixed(2)}km`,
+              origin,
+              dest,
+              spots: midSpots,
+              // The component expects [{lat, lng}, ...]
+              path: fullPath.map(([lng, lat]) => ({ lat, lng })),
+            };
+          })
+          .filter(Boolean); // Filter out nulls from failed courses
+
+        if (!cancelled) {
+          setCourses(built);
+        }
       } catch (e) {
-        console.error(e);
+        console.error("코스 데이터 로딩 또는 처리 중 오류 발생:", e);
         if (!cancelled) setMsg("코스 데이터를 불러오지 못했어요.");
       }
     })();
@@ -425,8 +262,6 @@ export default function RecommendedCourse() {
   useEffect(() => {
     if (!mapRef.current || !selectedCourse) return;
     drawCourse(selectedCourse);
-    // 현재 인덱스로 캐러셀도 맞춰두기(첫 로드 대비)
-    requestAnimationFrame(() => centerToIndex(idx, false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourse?.id, mapRef.current]);
 
@@ -610,40 +445,136 @@ export default function RecommendedCourse() {
 
   // ── UI
   return (
-    <div className="screen">
+    <div className="screen" style={{display: 'flex', flexDirection: 'column', height: '100vh', width: 360, margin: '0 auto'}}>
       <div className="appbar">
         <div className="appbar-title">추천코스</div>
       </div>
 
-      <div ref={mapContainerRef} className="map-container" />
+      <div ref={mapContainerRef} style={{height: 414, position: 'relative', overflow: 'hidden', flexShrink: 0}}>
+        <div style={{width: 186.24, height: 173.28, left: 94, top: 108, position: 'absolute', outline: '3.84px #1E1E22 solid', outlineOffset: '-1.92px'}} />
+        <div style={{width: 82, left: 43, top: 232, position: 'absolute', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', gap: 4, display: 'inline-flex'}}>
+          <div style={{alignSelf: 'stretch', textAlign: 'center', color: 'var(--main, #FF8C42)', fontSize: 12, fontFamily: 'Pretendard', fontWeight: '700', wordWrap: 'break-word'}}>해수욕장 근처</div>
+          <div style={{width: 34, height: 34, position: 'relative'}}>
+            <div style={{width: 34, height: 34, left: 0, top: 0, position: 'absolute', background: 'var(--main, #FF8C42)', backdropFilter: 'blur(13.05px)'}} />
+            <div style={{width: 19.43, height: 19.43, left: 7.08, top: 7.08, position: 'absolute', background: 'var(--main, #FF8C42)', border: '0.96px #1E1E22 solid', backdropFilter: 'blur(13.05px)'}} />
+            <div style={{width: 7.77, height: 7.77, left: 13.15, top: 13.15, position: 'absolute', background: '#1E1E22'}} />
+          </div>
+        </div>
+        <div style={{width: 69, left: 242, top: 86, position: 'absolute', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', gap: 4, display: 'inline-flex'}}>
+          <div style={{alignSelf: 'stretch', textAlign: 'center', color: 'var(--main, #FF8C42)', fontSize: 12, fontFamily: 'Pretendard', fontWeight: '700', wordWrap: 'break-word'}}>성산일출봉</div>
+          <div style={{width: 34, height: 34, position: 'relative'}}>
+            <div style={{width: 34, height: 34, left: 0, top: 0, position: 'absolute', background: 'var(--main, #FF8C42)', backdropFilter: 'blur(13.05px)'}} />
+            <div style={{width: 19.43, height: 19.43, left: 7.08, top: 7.08, position: 'absolute', background: 'var(--main, #FF8C42)', border: '0.96px #1E1E22 solid', backdropFilter: 'blur(13.05px)'}} />
+            <div style={{width: 7.77, height: 7.77, left: 13.15, top: 13.15, position: 'absolute', background: '#1E1E22'}} />
+          </div>
+        </div>
+        <div style={{width: 56, height: 88, left: 112, top: 107, position: 'absolute'}}>
+          <div style={{width: 56, height: 71, left: 0, top: 17, position: 'absolute'}}>
+            <div style={{width: 56, height: 56, left: 0, top: 0, position: 'absolute', background: 'white', borderRadius: 5}} />
+            <div style={{width: 50, height: 50, left: 3, top: 3, position: 'absolute', background: '#D8D8D8', borderRadius: 5}} />
+            <div style={{width: 50, height: 50, left: 3, top: 3, position: 'absolute', background: '#D8D8D8', borderRadius: 5}} />
+            <div style={{width: 20, height: 24, left: 18, top: 47, position: 'absolute'}}>
+              <div style={{width: 20, height: 24, left: 0, top: 0, position: 'absolute', background: 'black', outline: '2px black solid', outlineOffset: '-1px'}} />
+              <div style={{width: 6.46, height: 6.55, left: 7, top: 6.54, position: 'absolute', background: 'white', outline: '2px white solid', outlineOffset: '-1px'}} />
+            </div>
+          </div>
+          <div style={{left: 14, top: 0, position: 'absolute', textAlign: 'center', color: 'black', fontSize: 11, fontFamily: 'Pretendard', fontWeight: '400', wordWrap: 'break-word'}}>금오름</div>
+        </div>
+        <div style={{width: 56, height: 88, left: 185, top: 73, position: 'absolute'}}>
+          <div style={{width: 56, height: 71, left: 0, top: 17, position: 'absolute'}}>
+            <div style={{width: 56, height: 56, left: 0, top: 0, position: 'absolute', background: 'white', borderRadius: 5}} />
+            <div style={{width: 50, height: 50, left: 3, top: 3, position: 'absolute', background: '#D8D8D8', borderRadius: 5}} />
+            <div style={{width: 50, height: 50, left: 3, top: 3, position: 'absolute', background: '#D8D8D8', borderRadius: 5}} />
+            <div style={{width: 20, height: 24, left: 18, top: 47, position: 'absolute'}}>
+              <div style={{width: 20, height: 24, left: 0, top: 0, position: 'absolute', background: 'black'}} />
+              <div style={{width: 6.46, height: 6.55, left: 7, top: 6.54, position: 'absolute', background: 'white', outline: '2px white solid', outlineOffset: '-1px'}} />
+            </div>
+          </div>
+          <div style={{left: 14, top: 0, position: 'absolute', textAlign: 'center', color: 'black', fontSize: 11, fontFamily: 'Pretendard', fontWeight: '400', wordWrap: 'break-word'}}>금오름</div>
+        </div>
+        <div style={{padding: 10, left: 230, top: 295, position: 'absolute', background: 'rgba(30, 30, 34, 0.10)', borderRadius: 10, justifyContent: 'center', alignItems: 'center', gap: 4, display: 'inline-flex'}}>
+          <div style={{width: 12, height: 12, position: 'relative'}}>
+            <div style={{width: 3.50, height: 4, left: 0.99, top: 1, position: 'absolute', outline: '0.60px #1E1E22 solid', outlineOffset: '-0.30px'}} />
+            <div style={{width: 3.52, height: 4, left: 7.49, top: 7, position: 'absolute', outline: '0.60px var(--main, #FF8C42) solid', outlineOffset: '-0.30px'}} />
+            <div style={{width: 4.68, height: 7, left: 3.66, top: 2.50, position: 'absolute', outline: '0.60px #1E1E22 solid', outlineOffset: '-0.30px'}} />
+            <div style={{width: 0.64, height: 0.50, left: 2.43, top: 2.50, position: 'absolute', outline: '1.20px #1E1E22 solid', outlineOffset: '-0.60px'}} />
+            <div style={{width: 0.64, height: 0.50, left: 8.93, top: 8.50, position: 'absolute', outline: '1.20px #1E1E22 solid', outlineOffset: '-0.60px'}} />
+            <div style={{width: 12, height: 12, left: 12, top: 12, position: 'absolute', transform: 'rotate(-180deg)', transformOrigin: 'top left', opacity: 0}} />
+          </div>
+          <div style={{textAlign: 'center', color: 'black', fontSize: 11, fontFamily: 'Pretendard', fontWeight: '400', wordWrap: 'break-word'}}>아름다운 해변 코스</div>
+        </div>
+      </div>
 
       <div className="floating-top">
         {msg && <div className="toast">{msg}</div>}
       </div>
 
-      {/* 카드 캐러셀: 네이티브 스크롤 + rAF 스냅 */}
-      <div className="carousel-wrap" style={{ bottom: "84px" }}>
-        <div
-          ref={sliderRef}
-          className="carousel"
-          onScroll={onSliderScroll}
-          style={{ ["--card-w"]: `${CARD_W}px` }}
-        >
-          {courses.map((c, i) => (
-            <div
-              key={c.id}
-              className="card-click-wrap"
-              style={{ width: CARD_W }}
-            >
-              <CourseCard
-                course={c}
-                onRun={handleStartRunning}
-                active={i === idx}
-              />
-            </div>
-          ))}
-          <div className="end-spacer" />
+      <div style={{flex: 1, background: 'white', overflowY: 'auto', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 84, boxSizing: 'border-box'}}>
+        <div style={{alignSelf: 'stretch', paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8, background: 'white', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', gap: 12, display: 'flex'}}>
+          <div style={{width: 46, height: 4, opacity: 0.40, background: '#94989F', borderRadius: 100}} />
         </div>
+        {courses.map((course, i) => {
+          const distKm = getDistanceFromLatLonInKm(
+            course.origin.lat,
+            course.origin.lng,
+            course.dest.lat,
+            course.dest.lng
+          );
+          const timeStr = estimateTimeStr(distKm);
+          const active = i === idx;
+
+          return (
+            <div
+              key={course.id}
+              onClick={() => setIdx(i)}
+              style={{alignSelf: 'stretch', paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8, background: active ? '#FFF4EC' : 'white', borderRadius: 4, justifyContent: 'space-between', alignItems: 'center', display: 'inline-flex'}}
+            >
+              <div style={{width: 328, justifyContent: 'space-between', alignItems: 'center', display: 'flex'}}>
+                <div style={{justifyContent: 'flex-start', alignItems: 'center', gap: 16, display: 'flex'}}>
+                  <img style={{width: 100, height: 100, position: 'relative', borderRadius: 8}} src="https://placehold.co/100x100" />
+                  <div style={{width: 129, flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 4, display: 'inline-flex'}}>
+                    <div style={{paddingLeft: 3, paddingRight: 3, paddingTop: 1, paddingBottom: 1, background: '#FFDBC5', borderRadius: 3, justifyContent: 'flex-start', alignItems: 'center', gap: 2, display: 'inline-flex'}}>
+                      <div style={{width: 12, height: 12, position: 'relative', overflow: 'hidden'}}>
+                        <img style={{width: 12, height: 12, left: 0, top: 0, position: 'absolute'}} src="/badge.png" />
+                      </div>
+                      <div style={{color: '#373D44', fontSize: 10, fontFamily: 'Pretendard', fontWeight: '700', lineHeight: '16.50px', wordWrap: 'break-word'}}>추천</div>
+                    </div>
+                    <div style={{flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 6, display: 'flex'}}>
+                      <div style={{width: 177, color: '#1E1E22', fontSize: 18, fontFamily: 'Pretendard', fontWeight: '700', wordWrap: 'break-word'}}>{course.title}</div>
+                      <div style={{alignSelf: 'stretch', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 2, display: 'flex'}}>
+                        <div style={{alignSelf: 'stretch', color: '#626264', fontSize: 12, fontFamily: 'Pretendard', fontWeight: '500', wordWrap: 'break-word'}}>{course.desc1}</div>
+                        <div style={{color: '#626264', fontSize: 12, fontFamily: 'Pretendard', fontWeight: '500', wordWrap: 'break-word'}}>{course.desc2}</div>
+                      </div>
+                      <div style={{justifyContent: 'flex-start', alignItems: 'flex-start', gap: 4, display: 'inline-flex'}}>
+                        <div style={{justifyContent: 'flex-start', alignItems: 'center', gap: 3, display: 'flex'}}>
+                          <div style={{width: 12, height: 12, position: 'relative'}}>
+                            <img src="/km.png" style={{width: '100%', height: '100%'}} />
+                          </div>
+                          <div style={{justifyContent: 'flex-start', alignItems: 'center', gap: 6, display: 'flex'}}>
+                            <div style={{color: '#626264', fontSize: 11, fontFamily: 'Pretendard', fontWeight: '400', wordWrap: 'break-word'}}>{distKm.toFixed(2)}km</div>
+                          </div>
+                        </div>
+                        <div style={{justifyContent: 'flex-start', alignItems: 'center', gap: 3, display: 'flex'}}>
+                          <div style={{width: 12, height: 12, position: 'relative'}}>
+                             <img src="/timer.png" style={{width: '100%', height: '100%'}} />
+                          </div>
+                          <div style={{justifyContent: 'flex-start', alignItems: 'center', gap: 6, display: 'flex'}}>
+                            <div style={{color: '#626264', fontSize: 11, fontFamily: 'Pretendard', fontWeight: '400', wordWrap: 'break-word'}}>예상시간 {timeStr}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {active && (
+                <div style={{paddingLeft: 10, paddingRight: 10, paddingTop: 8, paddingBottom: 8, background: 'var(--main, #FF8C42)', borderRadius: 100, justifyContent: 'center', alignItems: 'center', gap: 10, display: 'flex'}} onClick={handleStartRunning}>
+                  <div style={{color: '#FCFCFC', fontSize: 11, fontFamily: 'Pretendard', fontWeight: '600', wordWrap: 'break-word'}}>달리기</div>
+                </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {alertComponent}
