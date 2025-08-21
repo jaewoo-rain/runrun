@@ -34,7 +34,7 @@ export default function CameraPage() {
   return (
     <CameraCaptureMobile
       nickname="러너닉네임"
-      locationName="함덕해수욕장"
+      locationName="도두봉"
       onNext={handleNext}
       stories={mockStories} // stories 데이터를 prop으로 전달
     />

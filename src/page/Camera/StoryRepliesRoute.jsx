@@ -44,7 +44,7 @@ export default function StoryRepliesRoute() {
 
   return (
     <StoryViewerPage
-      locationName={myStoryPayload.locationName || "함덕해수d욕장"}
+      locationName={myStoryPayload.locationName || "도두봉"}
       myStory={myStory}
       others={others}
     />

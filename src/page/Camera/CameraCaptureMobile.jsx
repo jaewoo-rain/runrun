@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 
 export default function CameraCaptureMobile({
   nickname = "러너닉네임",
-  locationName = "함덕해수욕장",
+  locationName = "도두봉",
   initialFacing = "environment",
   onComplete,
   onNext,

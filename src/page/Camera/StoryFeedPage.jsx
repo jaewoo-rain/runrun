@@ -121,7 +121,7 @@ export default function StoryFeedPage() {
             fontWeight: "700",
           }}
         >
-          함덕해수욕장
+          도두봉
         </div>
 
         {/* ✅ [이동됨] Run! 버튼 */}

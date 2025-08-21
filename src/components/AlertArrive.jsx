@@ -1,6 +1,6 @@
 import React from "react";
 
-const AlertArrive = ({ onClose, onTakePhoto, spotName = "함덕해수욕장" }) => {
+const AlertArrive = ({ onClose, onTakePhoto, spotName = "도두봉" }) => {
   return (
     <div
       style={{
