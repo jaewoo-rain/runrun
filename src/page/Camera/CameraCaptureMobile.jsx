@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 export default function CameraCaptureMobile({
   nickname = "러너닉네임",
@@ -9,6 +10,8 @@ export default function CameraCaptureMobile({
   onNext,
   stories = [],
 }) {
+  const elapsedTime = useSelector((state) => state.running.elapsedTime);
+
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -27,7 +30,7 @@ export default function CameraCaptureMobile({
   const [isFlashSupported, setIsFlashSupported] = useState(false);
 
   const handleClose = () => {
-    navigate(-1);
+    navigate("/run");
   };
 
   const stopStream = () => {
@@ -495,7 +498,7 @@ export default function CameraCaptureMobile({
               <span>{locationName}</span>
             </div>
             <div style={cameraHeaderRight} onClick={handleClose}>
-              <span>40:08</span>
+              <span>{elapsedTime}</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z"
