@@ -284,12 +284,12 @@ export default function RecommendedCourse() {
             const lastCoord = fullPath[fullPath.length - 1];
 
             const origin = {
-              name: "출발지",
+              name: segmentMap[segmentIds[0]].start.name,
               lat: firstCoord[1],
               lng: firstCoord[0],
             };
             const dest = {
-              name: "도착지",
+              name: segmentMap[segmentIds[segmentIds.length - 1]].end.name,
               lat: lastCoord[1],
               lng: lastCoord[0],
             };
@@ -429,7 +429,14 @@ export default function RecommendedCourse() {
       zIndex: 100,
       title: text,
       icon: {
-        content: `<div style="width:28px; height:28px; background-image:url(${LOC_ICON_URL}); background-size:contain; background-repeat:no-repeat; background-position:center;"></div>`,
+        content: `
+          <div style="position: relative; width: 28px; height: 28px; text-align: center;">
+            <img src="${LOC_ICON_URL}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
+            <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #FF8C42; font-weight: bold; white-space: nowrap;">
+              ${text}
+            </div>
+          </div>
+        `,
         size: new naver.maps.Size(28, 28),
         anchor: new naver.maps.Point(14, 28),
       },
@@ -446,7 +453,7 @@ export default function RecommendedCourse() {
         content: `
           <div style="position: relative; width: 33px; height: 42px; text-align: center;">
             <img class="marker-spot" src="${SPOT_ICON_URL}" alt="${title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" />
-            <div style="position: absolute; top: 12px; left: 0; right: 0; font-size: 10px; color: black; font-weight: bold; text-shadow: -1px 0 #fff, 0 1px #fff, 1px 0 #fff, 0 -1px #fff;">
+            <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 12px; color: black; font-weight: bold; white-space: nowrap;">
               ${title}
             </div>
           </div>

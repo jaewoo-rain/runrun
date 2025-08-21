@@ -841,9 +841,9 @@
           "distance_m": 22.12
         },
         {
-          "VISIT_AREA_NM": "도두몰",
-          "X_COORD": 126.4833912,
-          "Y_COORD": 33.5106123,
+          "VISIT_AREA_NM": "도두봉",
+          "X_COORD": 126.46840983,
+          "Y_COORD":  33.5079027,
           "TRAVEL_ID": "h_h001603",
           "VISIT_AREA_ID": "2307080004",
           "distance_m": 11.47
