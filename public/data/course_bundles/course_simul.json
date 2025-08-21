@@ -833,28 +833,12 @@
       },
       "spot": [
         {
-          "VISIT_AREA_NM": "어영소공원",
-          "X_COORD": 126.4875582,
-          "Y_COORD": 33.5183454,
-          "TRAVEL_ID": "h_h002866",
-          "VISIT_AREA_ID": "2308150003",
-          "distance_m": 22.12
-        },
-        {
           "VISIT_AREA_NM": "도두봉",
           "X_COORD": 126.46840983,
           "Y_COORD":  33.5079027,
           "TRAVEL_ID": "h_h001603",
           "VISIT_AREA_ID": "2307080004",
           "distance_m": 11.47
-        },
-        {
-          "VISIT_AREA_NM": "폴바셋 제주 용담 DT 점",
-          "X_COORD": 126.4872783,
-          "Y_COORD": 33.5174291,
-          "TRAVEL_ID": "h_h002006",
-          "VISIT_AREA_ID": "2307090001",
-          "distance_m": 28.33
         }
       ]
     },
