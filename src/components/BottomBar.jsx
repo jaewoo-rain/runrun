@@ -83,6 +83,8 @@ const BottomBar = ({ activeTab = "running", positioning = "fixed" }) => {
     borderTop: "0.50px #C4C4C6 solid",
     position: positioning,
     bottom: 0,
+    left: 0,
+    width: "100%",
     zIndex: 10,
     display: "flex",
     flexDirection: "column",
@@ -90,20 +92,14 @@ const BottomBar = ({ activeTab = "running", positioning = "fixed" }) => {
     alignItems: "center",
   };
 
-  if (positioning === "fixed") {
-    containerStyle.width = 328;
-    containerStyle.left = '50%';
-    containerStyle.transform = 'translateX(-50%)';
-  }
-
   return (
     <div style={containerStyle}>
       <div
         style={{
-          alignSelf: "stretch",
+          display: "flex",
+          width: "100%",
           justifyContent: "center",
           alignItems: "center",
-          display: "inline-flex",
         }}
       >
         {tabs.map((tab) => (

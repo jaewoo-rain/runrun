@@ -646,14 +646,6 @@
           "TRAVEL_ID": "h_h000248",
           "VISIT_AREA_ID": "2306020003",
           "distance_m": 20.77
-        },
-        {
-          "VISIT_AREA_NM": "이호 해양레저",
-          "X_COORD": 126.4525171,
-          "Y_COORD": 33.4969325,
-          "TRAVEL_ID": "h_h002659",
-          "VISIT_AREA_ID": "2308150005",
-          "distance_m": 26.06
         }
       ]
     },

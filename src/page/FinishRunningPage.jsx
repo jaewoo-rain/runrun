@@ -1,7 +1,90 @@
 // src/RunningCoursePage.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import BottomBar from "../components/BottomBar.jsx";
+
+/** 네이버 지도 스크립트 동적 로더 */
+function loadNaverMaps(clientId) {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== "undefined" && window.naver?.maps) {
+      resolve(window.naver);
+      return;
+    }
+    const id = "naver-maps-script";
+    const existing = document.getElementById(id);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(window.naver), {
+        once: true,
+      });
+      existing.addEventListener("error", (e) => reject(e), { once: true });
+      return;
+    }
+    const s = document.createElement("script");
+    s.id = id;
+    s.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve(window.naver);
+    s.onerror = (e) => reject(e);
+    document.head.appendChild(s);
+  });
+}
+
+const ResultMap = ({ userPath }) => {
+  const mapContainerRef = useRef(null);
+
+  useEffect(() => {
+    const loadAndDrawMap = async () => {
+      try {
+        const naver = await loadNaverMaps(import.meta.env.VITE_NAVER_CLIENT_ID);
+        if (!mapContainerRef.current) return;
+
+        const map = new naver.maps.Map(mapContainerRef.current, {
+          draggable: false,
+          scrollWheel: false,
+          keyboardShortcuts: false,
+          disableDoubleClickZoom: true,
+          disableDoubleTapZoom: true,
+          pinchZoom: false,
+        });
+
+        if (!userPath || userPath.length < 2) {
+          map.setCenter(new naver.maps.LatLng(33.38, 126.55));
+          map.setZoom(11);
+          return;
+        }
+
+        const pathCoords = userPath.map((p) => new naver.maps.LatLng(p.lat, p.lng));
+
+        new naver.maps.Polyline({
+          path: pathCoords,
+          strokeColor: "#FF8C42",
+          strokeWeight: 6,
+          map: map,
+        });
+
+        new naver.maps.Marker({ position: pathCoords[0], map: map });
+        new naver.maps.Marker({
+          position: pathCoords[pathCoords.length - 1],
+          map: map,
+        });
+
+        const bounds = new naver.maps.LatLngBounds(
+          pathCoords[0],
+          pathCoords[0]
+        );
+        pathCoords.forEach((coord) => bounds.extend(coord));
+        map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+      } catch (e) {
+        console.error("Failed to load or draw map", e);
+      }
+    };
+
+    loadAndDrawMap();
+  }, [userPath]);
+
+  return <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />;
+};
 
 const formatTime = (timeInSeconds) => {
   if (timeInSeconds === undefined || timeInSeconds === null) return "00:00:00";
@@ -31,7 +114,7 @@ const formatPace = (paceInMinutes) => {
   return `${minutes}'${seconds}''`;
 };
 
-const ImageCarousel = () => {
+const ImageCarousel = ({ userPath }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   const scrollRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -39,17 +122,7 @@ const ImageCarousel = () => {
   const [scrollLeftStart, setScrollLeftStart] = useState(0);
 
   const slides = [
-    <img
-      key="map"
-      style={{
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        userSelect: "none",
-      }}
-      src="https://placehold.co/328x328"
-      alt="map"
-    />,
+    <ResultMap key="map" userPath={userPath} />,
     <img
       key="photo"
       style={{
@@ -184,12 +257,18 @@ const ImageCarousel = () => {
 
 export default function FinishRunningPage() {
   const location = useLocation();
-  const { elapsedTime, distance, calories, pace } = location.state || {
+  const { elapsedTime, distance, calories, pace, userPath, courseTitle } = location.state || {
     elapsedTime: 0,
     distance: 0,
     calories: 0,
     pace: 0,
+    userPath: [],
+    courseTitle: "코스 정보 없음",
   };
+
+  useEffect(() => {
+    console.log("테스트용 사용자 경로 데이터:", userPath);
+  }, [userPath]);
 
   return (
     <div
@@ -229,7 +308,7 @@ export default function FinishRunningPage() {
               오늘 - 오전 7 : 40
             </div>
             <div style={{ color: "black", fontSize: 22, fontWeight: 600 }}>
-              제주 아름다운 해안 코스
+              {courseTitle || "알 수 없는 코스"}
             </div>
           </div>
 
@@ -278,7 +357,7 @@ export default function FinishRunningPage() {
         </div>
 
         {/* 지도 & 이미지 */}
-        <ImageCarousel />
+        <ImageCarousel userPath={userPath} />
 
         {/* 버튼 영역 */}
         <div
