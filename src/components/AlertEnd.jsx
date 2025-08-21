@@ -1,15 +1,24 @@
 import React from "react";
 
-const AlertEnd = ({ onClose, onEnd }) => {
+const AlertEnd = ({ onClose, onEnd, userName = "러너" }) => {
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+      if (e.key === "Enter") onEnd?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, onEnd]);
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        inset: 0,
+        backgroundColor: "rgba(0,0,0,0.6)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -17,148 +26,78 @@ const AlertEnd = ({ onClose, onEnd }) => {
       }}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
-          width: 288,
-          height: 168,
-          position: "relative",
-          overflow: "hidden",
+          width: 320,
+          maxWidth: "88vw",
+          background: "white",
+          borderRadius: 16,
+          padding: "20px 18px 16px",
+          textAlign: "center",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
         }}
       >
         <div
           style={{
-            width: 288,
-            height: 168,
-            left: 0,
-            top: 0,
-            position: "absolute",
-            background: "white",
-            borderRadius: 13,
-          }}
-        />
-        <div
-          style={{
-            left: 64,
-            top: 37,
-            position: "absolute",
-            textAlign: "center",
+            color: "#000",
+            fontSize: 20,
+            fontFamily: "Pretendard",
+            fontWeight: 700,
+            lineHeight: 1.3,
+            marginBottom: 6,
+            wordBreak: "keep-all",
           }}
         >
-          <span
-            style={{
-              color: "black",
-              fontSize: 22,
-              fontFamily: "Pretendard",
-              fontWeight: 600,
-              wordWrap: "break-word",
-            }}
-          >
-            달리기를
-            <br />
-          </span>
-          <span
-            style={{
-              color: "var(--main, #FF8C42)",
-              fontSize: 22,
-              fontFamily: "Pretendard",
-              fontWeight: 600,
-              wordWrap: "break-word",
-            }}
-          >
-            종료
-          </span>
-          <span
-            style={{
-              color: "black",
-              fontSize: 22,
-              fontFamily: "Pretendard",
-              fontWeight: 600,
-              wordWrap: "break-word",
-            }}
-          >
-            하시겠습니까?
-          </span>
+          축하드립니다 {userName}님!
         </div>
 
         <div
           style={{
-            width: 288,
-            height: 42.58,
-            left: 0,
-            top: 125.42,
-            position: "absolute",
-            overflow: "hidden",
+            color: "#000",
+            fontSize: 18,
+            fontFamily: "Pretendard",
+            fontWeight: 700,
+            lineHeight: 1.35,
+            marginBottom: 10,
+            wordBreak: "keep-all",
           }}
         >
-          {/* 취소 버튼 */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={onClose}
-            onKeyDown={(e) =>
-              (e.key === "Enter" || e.key === " ") && onClose?.()
-            }
-            style={{
-              width: 82.29,
-              left: 174.61,
-              top: 11,
-              position: "absolute",
-              textAlign: "center",
-              color: "var(--main, #FF8C42)",
-              fontSize: 15,
-              fontFamily: "Pretendard",
-              fontWeight: 700,
-              wordWrap: "break-word",
-              cursor: "pointer",
-              userSelect: "none",
-            }}
-          >
-            계속 달릴래요
-          </div>
-
-          {/* 종료 버튼 */}
-          <div
-            onClick={onEnd}
-            role="button"
-            tabIndex={0}
-            style={{
-              width: 82.29,
-              left: 30.1,
-              top: 11,
-              position: "absolute",
-              textAlign: "center",
-              color: "black",
-              fontSize: 15,
-              fontFamily: "Pretendard",
-              fontWeight: 700,
-              wordWrap: "break-word",
-              cursor: "pointer",
-              userSelect: "none",
-            }}
-          >
-            그만 달릴래요
-          </div>
-
-          <div
-            style={{
-              width: 288,
-              height: 0.77,
-              left: 0,
-              top: 0,
-              position: "absolute",
-              background: "#F0F0F2",
-            }}
-          />
-          <div
-            style={{
-              width: 1,
-              height: 41.81,
-              left: 143,
-              top: 0.77,
-              position: "absolute",
-              background: "#F0F0F2",
-            }}
-          />
+          코스 완주를 완료하셨습니다.
         </div>
+
+        <div
+          style={{
+            color: "#626264",
+            fontSize: 13,
+            fontFamily: "Pretendard",
+            fontWeight: 500,
+            lineHeight: 1.5,
+            marginBottom: 14,
+            wordBreak: "keep-all",
+          }}
+        >
+          해돋이 러너 배지를 획득하셨습니다.
+          <br />
+          러너들과 기록을 공유해보세요.
+        </div>
+
+        <button
+          onClick={onEnd}
+          style={{
+            appearance: "none",
+            background: "transparent",
+            border: "none",
+            color: "var(--main, #FF8C42)",
+            fontSize: 16,
+            fontFamily: "Pretendard",
+            fontWeight: 700,
+            cursor: "pointer",
+            padding: "6px 10px",
+          }}
+          aria-label="기록보기"
+        >
+          기록보기
+        </button>
       </div>
     </div>
   );
