@@ -82,45 +82,13 @@ export default function RunResultCarousel() {
           }}
         >
           {/* FinishRunningPage를 props와 함께 렌더링합니다. */}
-          <FinishRunningPage data={state} />
+          <FinishRunningPage
+            data={state}
+            activeSlide={activeSlide}
+            scrollToSlide={scrollToSlide}
+          />
         </div>
       </div>
-      <div
-        style={{
-          position: "absolute",
-          bottom: activeSlide === 1 ? "100px" : "40px", // 하단바 있을 때와 없을 때 위치 조정
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: 10,
-          zIndex: 10,
-          padding: "10px",
-          background: "rgba(0, 0, 0, 0.3)",
-          borderRadius: "20px",
-        }}
-      >
-        <div
-          onClick={() => scrollToSlide(0)}
-          style={{
-            width: 10,
-            height: 10,
-            background: activeSlide === 0 ? "#FF8C42" : "#C4C4C6",
-            borderRadius: 9999,
-            cursor: "pointer",
-          }}
-        />
-        <div
-          onClick={() => scrollToSlide(1)}
-          style={{
-            width: 10,
-            height: 10,
-            background: activeSlide === 1 ? "#FF8C42" : "#C4C4C6",
-            borderRadius: 9999,
-            cursor: "pointer",
-          }}
-        />
-      </div>
-      {activeSlide === 1 && <BottomBar activeTab="running" />}
     </div>
   );
 }
