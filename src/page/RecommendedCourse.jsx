@@ -368,7 +368,7 @@ export default function RecommendedCourse() {
             setAlertComponent(
                 <AlertStart
                     onClose={() => setAlertComponent(null)}
-                    onStart={() => navigate("/run", { state: { courseId: selectedCourse.id } })}
+                    onStart={() => navigate("/run", { state: { course: selectedCourse } })}
                 />
             );
           } else {

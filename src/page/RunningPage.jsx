@@ -36,18 +36,6 @@ function loadNaverMaps(clientId) {
   });
 }
 
-/** RecommendedCourse → navigate 로 전달한 courseId 해석 */
-function parseCourseId(raw) {
-  const str = String(raw || "");
-  let m = str.match(/^course_(\d+)_(\d+)$/);
-  if (m) return { fileNo: m[1], lineIndex: parseInt(m[2], 10) };
-  m = str.match(/^(\d+)[-_](\d+)$/);
-  if (m) return { fileNo: m[1], lineIndex: parseInt(m[2], 10) };
-  m = str.match(/^(\d+)$/);
-  if (m) return { fileNo: m[1], lineIndex: 0 };
-  return { fileNo: "5", lineIndex: 0 };
-}
-
 // ✅ 화면 실측 뷰포트 사이즈 훅 (주소창 변화 대응)
 function useViewport() {
   const pick = () => ({
@@ -73,10 +61,9 @@ function useViewport() {
 export default function RunningPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { fileNo, lineIndex } = parseCourseId(location.state?.courseId);
+  const course = location.state?.course;
 
   const [mapErr, setMapErr] = useState("");
-  const [courseJson, setCourseJson] = useState(null);
   const [selectedLine, setSelectedLine] = useState(null); // [[lng,lat], ...]
   const [poiList, setPoiList] = useState([]); // [{name,lat,lng}]
   const [visitedSpots, setVisitedSpots] = useState(new Set());
@@ -158,45 +145,16 @@ export default function RunningPage() {
     distance,
   ]);
 
-  // 1) 코스 JSON 로드
+  // 1) 코스 데이터 처리
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/data/course_bundles/course_${fileNo}.json`);
-        if (!res.ok) throw new Error(`코스 ${fileNo}를 불러올 수 없어요.`);
-        const data = await res.json();
-        if (cancelled) return;
-
-        const lines = data?.lines || [];
-        const line = lines[lineIndex] || lines[0];
-        if (!Array.isArray(line) || line.length < 2)
-          throw new Error("경로가 비어있어요.");
-
-        const spots = (data.spots || []).map((s) => ({
-          name: s.name,
-          lat: s.lat,
-          lng: s.lng,
-        }));
-        const guides = (data.guide_points || []).map((g) => ({
-          name: g.name,
-          lat: g.lat,
-          lng: g.lng,
-        }));
-
-        setCourseJson(data);
-        setSelectedLine(line);
-        setPoiList([...spots, ...guides].filter((p) => p.lat && p.lng));
-      } catch (e) {
-        console.error(e);
-        if (!cancelled)
-          setMapErr(e.message || "코스 데이터를 불러오지 못했어요.");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [fileNo, lineIndex]);
+    if (course) {
+      const line = course.path.map(p => [p.lng, p.lat]);
+      setSelectedLine(line);
+      setPoiList(course.spots || []);
+    } else {
+      setMapErr("코스 정보를 불러오지 못했습니다.");
+    }
+  }, [course]);
 
   // 2) 지도 초기화 & 경로/마커 그리기
   useEffect(() => {
