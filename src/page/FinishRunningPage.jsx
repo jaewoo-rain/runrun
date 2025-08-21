@@ -40,8 +40,6 @@ const ResultMap = ({ userPath }) => {
         if (!mapContainerRef.current) return;
 
         const map = new naver.maps.Map(mapContainerRef.current, {
-          center: new naver.maps.LatLng(33.38, 126.55), // Default center
-          zoom: 11,
           draggable: false,
           scrollWheel: false,
           keyboardShortcuts: false,
@@ -50,7 +48,11 @@ const ResultMap = ({ userPath }) => {
           pinchZoom: false,
         });
 
-        if (!userPath || userPath.length < 2) return;
+        if (!userPath || userPath.length < 2) {
+          map.setCenter(new naver.maps.LatLng(33.38, 126.55));
+          map.setZoom(11);
+          return;
+        }
 
         const pathCoords = userPath.map((p) => new naver.maps.LatLng(p.lat, p.lng));
 
@@ -62,9 +64,15 @@ const ResultMap = ({ userPath }) => {
         });
 
         new naver.maps.Marker({ position: pathCoords[0], map: map });
-        new naver.maps.Marker({ position: pathCoords[pathCoords.length - 1], map: map });
+        new naver.maps.Marker({
+          position: pathCoords[pathCoords.length - 1],
+          map: map,
+        });
 
-        const bounds = new naver.maps.LatLngBounds(pathCoords[0], pathCoords[0]);
+        const bounds = new naver.maps.LatLngBounds(
+          pathCoords[0],
+          pathCoords[0]
+        );
         pathCoords.forEach((coord) => bounds.extend(coord));
         map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
       } catch (e) {
