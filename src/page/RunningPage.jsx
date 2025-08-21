@@ -156,7 +156,7 @@ export default function RunningPage() {
   // 1) 코스 데이터 처리
   useEffect(() => {
     if (course) {
-      const line = course.path.map(p => [p.lng, p.lat]);
+      const line = course.path.map((p) => [p.lng, p.lat]);
       setSelectedLine(line);
       setPoiList(course.spots || []);
     } else {
@@ -256,7 +256,6 @@ export default function RunningPage() {
     }
   }, [userPath]);
 
-
   // 3) 사용자 위치 마커(커스텀 아이콘) + 자동 따라가기 + 스팟 근접 알림(50m)
   useEffect(() => {
     const naver = window.naver?.maps;
@@ -307,7 +306,7 @@ export default function RunningPage() {
       for (const p of poiList) {
         if (visitedSpots.has(p.name) || arrivalAlert) continue;
         const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
-        if (dM <= 50) {
+        if (dM >= 50) {
           setVisitedSpots((prev) => new Set(prev).add(p.name));
           setArrivalAlert(
             <AlertArrive
@@ -315,6 +314,7 @@ export default function RunningPage() {
               onClose={() => setArrivalAlert(null)}
               onTakePhoto={() => {
                 console.log(`사진찍기: ${p.name}`);
+                navigate("/camera");
                 setArrivalAlert(null);
               }}
             />
