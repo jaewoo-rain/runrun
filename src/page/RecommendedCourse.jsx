@@ -405,12 +405,7 @@ export default function RecommendedCourse() {
       zIndex: 100,
       title: text,
       icon: {
-        content: `
-          <div class="marker-with-label ${side}">
-            <img class="marker-loc" src="${LOC_ICON_URL}" alt="${text}" />
-            <div class="marker-label">${text || ""}</div>
-          </div>
-        `,
+        url: LOC_ICON_URL,
         size: new naver.maps.Size(28, 28),
         anchor: new naver.maps.Point(14, 28),
       },

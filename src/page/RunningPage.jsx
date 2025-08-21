@@ -77,10 +77,12 @@ export default function RunningPage() {
   const [prevLocation, setPrevLocation] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const { location: currentLocation } = useWatchLocation();
+  const [userPath, setUserPath] = useState([]);
 
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const polyRef = useRef(null);
+  const userPolyRef = useRef(null);
   const markersRef = useRef({ start: null, end: null, me: null, poi: [] });
 
   // 최근 지도의 자동 추적 기준점(지터 방지)
@@ -121,18 +123,24 @@ export default function RunningPage() {
 
   // Location tracking and calculation effect (거리/칼로리/페이스)
   useEffect(() => {
-    if (!isPaused && !showEndAlert && currentLocation && prevLocation) {
-      const newDistance = getDistanceFromLatLonInKm(
-        prevLocation.latitude,
-        prevLocation.longitude,
-        currentLocation.latitude,
-        currentLocation.longitude
-      );
-      if (newDistance > 0.002) {
-        const newTotal = distance + newDistance;
-        setDistance(newTotal);
-        setCalories(newTotal * 65);
-        if (newTotal > 0) setPace(elapsedTime / 60 / newTotal);
+    if (!isPaused && !showEndAlert && currentLocation) {
+      setUserPath((prev) => [
+        ...prev,
+        { lat: currentLocation.latitude, lng: currentLocation.longitude },
+      ]);
+      if (prevLocation) {
+        const newDistance = getDistanceFromLatLonInKm(
+          prevLocation.latitude,
+          prevLocation.longitude,
+          currentLocation.latitude,
+          currentLocation.longitude
+        );
+        if (newDistance > 0.002) {
+          const newTotal = distance + newDistance;
+          setDistance(newTotal);
+          setCalories(newTotal * 65);
+          if (newTotal > 0) setPace(elapsedTime / 60 / newTotal);
+        }
       }
     }
     setPrevLocation(currentLocation);
@@ -226,6 +234,29 @@ export default function RunningPage() {
     };
   }, [selectedLine]);
 
+  // 사용자 경로 그리기
+  useEffect(() => {
+    const naver = window.naver?.maps;
+    const map = mapRef.current;
+    if (!naver || !map || userPath.length < 2) return;
+
+    const pathCoords = userPath.map((p) => new naver.LatLng(p.lat, p.lng));
+
+    if (!userPolyRef.current) {
+      userPolyRef.current = new naver.Polyline({
+        path: pathCoords,
+        strokeColor: "#FF8C42",
+        strokeOpacity: 0.8,
+        strokeWeight: 8,
+        zIndex: 100,
+        map: map,
+      });
+    } else {
+      userPolyRef.current.setPath(pathCoords);
+    }
+  }, [userPath]);
+
+
   // 3) 사용자 위치 마커(커스텀 아이콘) + 자동 따라가기 + 스팟 근접 알림(50m)
   useEffect(() => {
     const naver = window.naver?.maps;
@@ -306,12 +337,19 @@ export default function RunningPage() {
 
   const handleStopClick = () => setShowEndAlert(true);
   const handleCloseEndAlert = () => setShowEndAlert(false);
-  const handleEndRunning = () => (
-    setShowEndAlert(false),
+  const handleEndRunning = () => {
+    setShowEndAlert(false);
     navigate("/finish_run", {
-      state: { elapsedTime, distance, calories, pace },
-    })
-  );
+      state: {
+        elapsedTime,
+        distance,
+        calories,
+        pace,
+        userPath,
+        courseTitle: course?.title,
+      },
+    });
+  };
   const togglePause = () => setIsPaused(!isPaused);
 
   return (
