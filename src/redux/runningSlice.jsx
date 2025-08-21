@@ -1,27 +1,27 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getDistanceFromLatLonInKm } from "../utils/location.js"; // 경로 유틸 함수 import
+import { getDistanceFromLatLonInKm } from "../utils/location.js";
 
 const initialState = {
   status: "idle", // 'idle' | 'running' | 'paused'
   course: null,
   elapsedTime: 0,
-  distance: 0, // km 단위
+  distance: 0,
   calories: 0,
-  pace: 0, // min/km
-  userPath: [], // [{lat, lng}]
+  pace: 0,
+  userPath: [],
   visitedSpots: [],
-  prevLocation: null, // 마지막 위치 기록
+  prevLocation: null,
+  arrivedSpotInfo: null, // 추가: 현재 도착한 스팟 정보
 };
 
 const runningSlice = createSlice({
   name: "running",
   initialState,
   reducers: {
-    // 달리기 시작: 코스 정보를 받아와 상태를 초기화하고 'running'으로 변경
     startRun: (state, action) => {
       state.status = "running";
-      state.course = action.payload; // action.payload에 course 객체가 담겨 옴
-      // 모든 측정 지표 초기화
+      state.course = action.payload;
+      // 모든 상태 초기화
       state.elapsedTime = 0;
       state.distance = 0;
       state.calories = 0;
@@ -29,24 +29,22 @@ const runningSlice = createSlice({
       state.userPath = [];
       state.visitedSpots = [];
       state.prevLocation = null;
+      state.arrivedSpotInfo = null; // 달리기 시작 시 초기화
     },
-    // 달리기 완전 종료 및 초기화
     endRun: (state) => {
-      return initialState; // 모든 상태를 초기 상태로 리셋
+      // initialState를 반환하여 모든 상태를 깨끗하게 리셋
+      return initialState;
     },
-    // 일시정지 토글
     togglePause: (state) => {
       state.status = state.status === "running" ? "paused" : "running";
     },
-    // 1초마다 시간 증가
     tick: (state) => {
       if (state.status === "running") {
         state.elapsedTime += 1;
       }
     },
-    // 위치 업데이트 및 거리/칼로리/페이스 계산
     updateLocation: (state, action) => {
-      const currentLocation = action.payload; // { latitude, longitude }
+      const currentLocation = action.payload;
       state.userPath.push({
         lat: currentLocation.latitude,
         lng: currentLocation.longitude,
@@ -60,10 +58,9 @@ const runningSlice = createSlice({
           currentLocation.longitude
         );
 
-        // 최소 2m 이상 움직였을 때만 거리 계산 (오차 보정)
         if (newDistance > 0.002) {
           state.distance += newDistance;
-          state.calories = state.distance * 65; // 칼로리 계산 (체중 65kg 기준)
+          state.calories = state.distance * 65;
           if (state.distance > 0) {
             state.pace = state.elapsedTime / 60 / state.distance;
           }
@@ -71,9 +68,16 @@ const runningSlice = createSlice({
       }
       state.prevLocation = currentLocation;
     },
-    // 방문한 스팟 추가
     addVisitedSpot: (state, action) => {
       state.visitedSpots.push(action.payload);
+    },
+    // 추가: 도착한 스팟 정보를 Redux에 저장하는 리듀서
+    setArrivedSpot: (state, action) => {
+      state.arrivedSpotInfo = action.payload;
+    },
+    // 추가: 도착한 스팟 정보를 Redux에서 제거하는 리듀서
+    clearArrivedSpot: (state) => {
+      state.arrivedSpotInfo = null;
     },
   },
 });
@@ -85,6 +89,8 @@ export const {
   tick,
   updateLocation,
   addVisitedSpot,
+  setArrivedSpot, // export 추가
+  clearArrivedSpot, // export 추가
 } = runningSlice.actions;
 
 export default runningSlice.reducer;

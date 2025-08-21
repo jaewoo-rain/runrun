@@ -12,11 +12,14 @@ import {
   tick,
   updateLocation,
   addVisitedSpot,
+  setArrivedSpot, // 추가
+  clearArrivedSpot, // 추가
 } from "../redux/runningSlice";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 
 const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 const LOC_ICON_URL = "/location.png";
+const SPOT_ICON_BLACK_URL = "/location_pin_black.png";
 
 function loadNaverMaps(clientId) {
   return new Promise((resolve, reject) => {
@@ -78,11 +81,14 @@ export default function RunningPage() {
     pace,
     userPath,
     visitedSpots,
+    arrivedSpotInfo, // 변경점: Redux 스토어에서 상태 가져오기
   } = useSelector((state) => state.running);
 
   const [mapErr, setMapErr] = useState("");
   const [arrivalAlert, setArrivalAlert] = useState(null);
   const [showEndAlert, setShowEndAlert] = useState(false);
+  // const [arrivedSpotInfo, setArrivedSpotInfo] = useState(null); // 변경점: 이 줄을 삭제
+  const [isMapReady, setIsMapReady] = useState(false);
 
   const { location: currentLocation } = useWatchLocation();
 
@@ -167,14 +173,13 @@ export default function RunningPage() {
 
         polyRef.current = new naver.maps.Polyline({
           path: pathCoords,
-          strokeColor: "#FF8C42",
+          strokeColor: "#111111",
           strokeOpacity: 0.95,
           strokeWeight: 6,
           zIndex: 60,
           map,
         });
 
-        // 변경점: 출발/도착 마커 아이콘을 URL 대신 HTML content로 설정합니다.
         const markerIcon = {
           content: `<div style="width:28px; height:28px; background-image:url(${LOC_ICON_URL}); background-size:contain; background-repeat:no-repeat; background-position:center;"></div>`,
           size: new naver.maps.Size(28, 28),
@@ -200,6 +205,8 @@ export default function RunningPage() {
         const bounds = new naver.maps.LatLngBounds(startLL, startLL);
         pathCoords.forEach((ll) => bounds.extend(ll));
         map.fitBounds(bounds, { top: 0, right: 0, bottom: 0, left: 0 });
+
+        setIsMapReady(true);
       } catch (e) {
         console.error(e);
         setMapErr(`지도 초기화 실패: ${e.message || e}`);
@@ -209,6 +216,7 @@ export default function RunningPage() {
     draw();
     return () => {
       cancelled = true;
+      setIsMapReady(false);
       if (polyRef.current) polyRef.current.setMap(null);
       Object.values(markersRef.current).forEach((m) => m?.setMap?.(null));
       markersRef.current = { start: null, end: null, me: null, poi: [] };
@@ -237,33 +245,35 @@ export default function RunningPage() {
   }, [userPath]);
 
   useEffect(() => {
-    const naver = window.naver?.maps;
+    if (!isMapReady) {
+      return;
+    }
+
+    const naverMaps = window.naver.maps;
     const map = mapRef.current;
-    if (!naver || !map) return;
 
     if (currentLocation?.latitude && currentLocation?.longitude) {
       const { latitude: lat, longitude: lng } = currentLocation;
-      const here = new naver.LatLng(lat, lng);
+      const here = new naverMaps.LatLng(lat, lng);
 
       if (!markersRef.current.me) {
-        markersRef.current.me = new naver.Marker({
+        markersRef.current.me = new naverMaps.Marker({
           position: here,
           map,
           title: "내 위치",
           zIndex: 999,
           icon: {
             url: "/user_location.png",
-            size: new naver.Size(36, 36),
-            scaledSize: new naver.Size(36, 36),
-            origin: new naver.Point(0, 0),
-            anchor: new naver.Point(18, 18),
+            size: new naverMaps.Size(36, 36),
+            scaledSize: new naverMaps.Size(36, 36),
+            origin: new naverMaps.Point(0, 0),
+            anchor: new naverMaps.Point(18, 18),
           },
         });
         map.setCenter(here);
         lastFollowPosRef.current = { lat, lng };
       } else {
         markersRef.current.me.setPosition(here);
-
         const lp = lastFollowPosRef.current;
         if (lp) {
           const movedM =
@@ -278,11 +288,30 @@ export default function RunningPage() {
         }
       }
 
+      if (arrivedSpotInfo) {
+        const distanceFromArrivedSpot =
+          getDistanceFromLatLonInKm(
+            lat,
+            lng,
+            arrivedSpotInfo.lat,
+            arrivedSpotInfo.lng
+          ) * 1000;
+        if (distanceFromArrivedSpot < 50) {
+          // 50m 이상 떨어지면 UI 사라짐
+          // 변경점: dispatch로 Redux 상태 업데이트
+          dispatch(clearArrivedSpot());
+        }
+      }
+
       for (const p of course?.spots || []) {
         if (visitedSpots.includes(p.name) || arrivalAlert) continue;
         const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
-        if (dM < 50) {
+        if (dM > 50) {
+          // 50m 이하 들어올 경우 스팟 알림
           dispatch(addVisitedSpot(p.name));
+          // 변경점: dispatch로 Redux 상태 업데이트
+          dispatch(setArrivedSpot(p));
+
           setArrivalAlert(
             <AlertArrive
               spotName={p.name}
@@ -298,7 +327,16 @@ export default function RunningPage() {
         }
       }
     }
-  }, [currentLocation, course, visitedSpots, arrivalAlert, dispatch, navigate]);
+  }, [
+    isMapReady,
+    currentLocation,
+    course,
+    visitedSpots,
+    arrivalAlert,
+    arrivedSpotInfo,
+    dispatch,
+    navigate,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -308,6 +346,10 @@ export default function RunningPage() {
       }
     };
   }, []);
+
+  const handleGoToFeed = () => {
+    navigate("/story-feed");
+  };
 
   const handleStopClick = () => setShowEndAlert(true);
   const handleCloseEndAlert = () => setShowEndAlert(false);
@@ -362,6 +404,57 @@ export default function RunningPage() {
           height: `${vpH}px`,
         }}
       />
+
+      {arrivedSpotInfo && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: "16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            zIndex: 200,
+            paddingTop: `calc(16px + env(safe-area-inset-top, 0px))`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#000",
+              fontSize: "16px",
+              fontWeight: "bold",
+            }}
+          >
+            <img
+              src={SPOT_ICON_BLACK_URL}
+              alt="spot"
+              style={{ width: "24px", height: "24px" }}
+            />
+            <span>{arrivedSpotInfo.name}</span>
+          </div>
+          <button
+            onClick={handleGoToFeed}
+            style={{
+              background: "#FF8C42",
+              color: "white",
+              border: "none",
+              borderRadius: "20px",
+              padding: "8px 16px",
+              fontSize: "14px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+            }}
+          >
+            &larr; 피드 바로가기
+          </button>
+        </div>
+      )}
 
       {mapErr && (
         <div
