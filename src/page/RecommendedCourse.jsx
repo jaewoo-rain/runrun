@@ -378,6 +378,8 @@ export default function RecommendedCourse() {
     })();
     return () => {
       cancelled = true;
+      // Remove event listener when component unmounts
+
       clearOverlays();
       mapRef.current = null;
     };
