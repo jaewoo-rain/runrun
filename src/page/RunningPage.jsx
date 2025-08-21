@@ -352,6 +352,17 @@ export default function RunningPage() {
   };
   const togglePause = () => setIsPaused(!isPaused);
 
+  const handleRecenterClick = () => {
+    const map = mapRef.current;
+    const naver = window.naver?.maps;
+    if (map && naver && currentLocation) {
+      const { latitude, longitude } = currentLocation;
+      const userLocation = new naver.LatLng(latitude, longitude);
+      map.panTo(userLocation);
+      lastFollowPosRef.current = { lat: latitude, lng: longitude };
+    }
+  };
+
   return (
     // ✅ CSS 없이 inline style로 전체 화면 고정 + 실측 높이 적용
     <div
@@ -399,6 +410,33 @@ export default function RunningPage() {
       {showEndAlert && (
         <AlertEnd onClose={handleCloseEndAlert} onEnd={handleEndRunning} />
       )}
+
+      <button
+        onClick={handleRecenterClick}
+        style={{
+          position: "absolute",
+          bottom: "25%",
+          right: "20px",
+          zIndex: 300,
+          background: "white",
+          border: "1px solid #eee",
+          borderRadius: "50%",
+          width: "48px",
+          height: "48px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+        }}
+        aria-label="현재 위치로 이동"
+      >
+        <img
+          src="/location.png"
+          alt="현재 위치"
+          style={{ width: "24px", height: "24px" }}
+        />
+      </button>
 
       <div
         style={{
