@@ -73,34 +73,7 @@ export default function MissionCertificate({ data }) {
         인증하는
       </div>
 
-      {/* 공유 버튼 */}
-      <div
-        style={{
-          padding: 9.6,
-          left: 105.38,
-          top: 552.96,
-          position: "absolute",
-          background: "rgba(255,255,255,0.6)",
-          borderRadius: 35.52,
-          backdropFilter: "blur(1.92px)",
-          display: "inline-flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            color: "black",
-            fontSize: 13.44,
-            fontFamily: "Roboto",
-            fontWeight: "400",
-            lineHeight: "23.04px",
-          }}
-        >
-          런제주 피드에 공유하기
-        </div>
-      </div>
+      
 
       {/* 하단 아이콘들 (대체용) */}
       <div

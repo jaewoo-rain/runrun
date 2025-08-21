@@ -255,7 +255,39 @@ const ImageCarousel = ({ userPath }) => {
   );
 };
 
-export default function FinishRunningPage({ data }) {
+const CarouselDots = ({ activeSlide, scrollToSlide }) => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      gap: 10,
+      padding: "10px",
+    }}
+  >
+    <div
+      onClick={() => scrollToSlide(0)}
+      style={{
+        width: 10,
+        height: 10,
+        background: activeSlide === 0 ? "#FF8C42" : "#C4C4C6",
+        borderRadius: "50%",
+        cursor: "pointer",
+      }}
+    />
+    <div
+      onClick={() => scrollToSlide(1)}
+      style={{
+        width: 10,
+        height: 10,
+        background: activeSlide === 1 ? "#FF8C42" : "#C4C4C6",
+        borderRadius: "50%",
+        cursor: "pointer",
+      }}
+    />
+  </div>
+);
+
+export default function FinishRunningPage({ data, activeSlide, scrollToSlide }) {
   const { elapsedTime, distance, calories, pace, userPath, courseTitle } = data || {
     elapsedTime: 0,
     distance: 0,
@@ -274,6 +306,7 @@ export default function FinishRunningPage({ data }) {
       style={{
         width: 360,
         height: "100%",
+        maxHeight: 800, // Added to match MissionCertificatePage
         background: "white",
         overflowY: "auto",
         margin: "0 auto",
@@ -283,7 +316,7 @@ export default function FinishRunningPage({ data }) {
       {/* 본문 */}
       <div
         style={{
-          padding: "20px 16px 120px 16px", // 하단바 영역 확보
+          padding: "20px 16px 40px 16px", // 하단 여백 조정
           display: "flex",
           flexDirection: "column",
           alignItems: "center", // 전체 중앙 정렬
@@ -357,6 +390,8 @@ export default function FinishRunningPage({ data }) {
         <div style={{ width: 328, height: 328 }}>
           <ResultMap userPath={userPath} />
         </div>
+
+        <CarouselDots activeSlide={activeSlide} scrollToSlide={scrollToSlide} />
 
         {/* 버튼 영역 */}
         <div
