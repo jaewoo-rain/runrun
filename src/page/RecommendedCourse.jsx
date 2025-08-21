@@ -1,18 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import "./RecommendedCourse.css";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertStart from "../components/AlertStart.jsx";
 import AlertNotStart from "../components/AlertNotStart.jsx";
 import BottomBar from "../components/BottomBar.jsx";
+import { useDispatch } from "react-redux";
+import { startRun } from "../redux/runningSlice";
 
-/**
- * 필요 .env
- * VITE_NAVER_CLIENT_ID=네이버지도클라이언트ID
- * (선택) VITE_TMAP_PROXY=http://localhost:4000/api/tmap/pedestrian
- */
-
-// ────────────────────────────────────────────────
 // 네이버 지도 로더
 function loadNaverMaps(clientId) {
   return new Promise((resolve, reject) => {
@@ -23,7 +24,9 @@ function loadNaverMaps(clientId) {
     const id = "naver-maps-script";
     const existing = document.getElementById(id);
     if (existing) {
-      existing.addEventListener("load", () => resolve(window.naver), { once: true });
+      existing.addEventListener("load", () => resolve(window.naver), {
+        once: true,
+      });
       existing.addEventListener("error", (e) => reject(e), { once: true });
       return;
     }
@@ -39,19 +42,18 @@ function loadNaverMaps(clientId) {
   });
 }
 
-// ────────────────────────────────────────────────
 // Tmap 보행자 프록시
 const TMAP_PROXY =
-    import.meta.env.VITE_TMAP_PROXY ||
-    "http://192.168.35.130:4000/api/tmap/pedestrian";
+  import.meta.env.VITE_TMAP_PROXY ||
+  "http://192.168.35.130:4000/api/tmap/pedestrian";
 
 async function fetchTmapPedestrian({
-                                     startLng,
-                                     startLat,
-                                     goalLng,
-                                     goalLat,
-                                     searchOption = "0",
-                                   }) {
+  startLng,
+  startLat,
+  goalLng,
+  goalLat,
+  searchOption = "0",
+}) {
   try {
     const qs = new URLSearchParams({
       startLng: String(startLng),
@@ -71,39 +73,32 @@ async function fetchTmapPedestrian({
   }
 }
 
-// 표시용 계산
-const paceMinPerKm = 8;
-function estimateTimeStr(km, pace = paceMinPerKm) {
-  const minutes = Math.round(km * pace);
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-// ────────────────────────────────────────────────
-const LOC_ICON_URL = "/location.png"; // public/location.png
-const SPOT_ICON_URL = "/spot.png"; // public/spot.png
+const LOC_ICON_URL = "/location.png";
+const SPOT_ICON_URL = "/spot.png";
 const JSON_URL = "/data/course_bundles/course_simul.json";
 
 export default function RecommendedCourse() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
-  const RECOMMENDED_COURSE_TITLES = ["낭만 해안도로 코스", "제주 원도심 입문", "하천과 바다가 만나는 길"];
+  const RECOMMENDED_COURSE_TITLES = [
+    "낭만 해안도로 코스",
+    "제주 원도심 입문",
+    "하천과 바다가 만나는 길",
+  ];
 
-  // ── 레이아웃 상수 (앱바는 화면에 없지만, 인디케이터 정렬용 가상 높이)
-  const VIRTUAL_APPBAR_H = 56; // 인디케이터가 여기까지 올라오게 제한
-  const BOTTOM_BAR_H = 56;     // BottomBar 실제 높이와 동일하게 유지
-  const INDICATOR_AREA_H = 24; // 인디케이터 영역 높이 (패딩 포함)
+  const VIRTUAL_APPBAR_H = 56;
+  const BOTTOM_BAR_H = 56;
+  const INDICATOR_AREA_H = 24;
 
-  // 코스 로딩
   const [courses, setCourses] = useState([]);
   const [idx, setIdx] = useState(0);
   const selectedCourse = useMemo(
-      () =>
-          courses.length
-              ? courses[Math.max(0, Math.min(idx, courses.length - 1))]
-              : null,
-      [courses, idx]
+    () =>
+      courses.length
+        ? courses[Math.max(0, Math.min(idx, courses.length - 1))]
+        : null,
+    [courses, idx]
   );
 
   const [msg, setMsg] = useState("");
@@ -122,11 +117,6 @@ export default function RecommendedCourse() {
     startHeight: 0,
   });
 
-  /**
-   * 스냅 포인트 정의
-   * - min: 인디케이터 높이 (완전히 내렸을 때 인디케이터가 보이게)
-   * - mid: 중간 높이 (초기 상태)
-   */
   const SNAP_POINTS = useMemo(() => {
     const vh = window.innerHeight;
     const max = Math.max(200, vh - BOTTOM_BAR_H - VIRTUAL_APPBAR_H);
@@ -134,22 +124,25 @@ export default function RecommendedCourse() {
     return [INDICATOR_AREA_H, mid];
   }, []);
 
-  const handleDragMove = useCallback((e) => {
-    if (!dragState.current.isDragging) return;
-    e.preventDefault();
+  const handleDragMove = useCallback(
+    (e) => {
+      if (!dragState.current.isDragging) return;
+      e.preventDefault();
 
-    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-    const deltaY = currentY - dragState.current.startY;
-    const newHeight = dragState.current.startHeight - deltaY;
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      const deltaY = currentY - dragState.current.startY;
+      const newHeight = dragState.current.startHeight - deltaY;
 
-    const minHeight = SNAP_POINTS[0];
-    const maxHeight = SNAP_POINTS[SNAP_POINTS.length - 1];
-    const clampedHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+      const minHeight = SNAP_POINTS[0];
+      const maxHeight = SNAP_POINTS[SNAP_POINTS.length - 1];
+      const clampedHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
 
-    if (sheetRef.current) {
-      sheetRef.current.style.height = `${clampedHeight}px`;
-    }
-  }, [SNAP_POINTS]);
+      if (sheetRef.current) {
+        sheetRef.current.style.height = `${clampedHeight}px`;
+      }
+    },
+    [SNAP_POINTS]
+  );
 
   const handleDragEnd = useCallback(() => {
     if (!dragState.current.isDragging) return;
@@ -163,7 +156,9 @@ export default function RecommendedCourse() {
     const currentHeight = sheetRef.current.offsetHeight;
 
     const closestSnapPoint = SNAP_POINTS.reduce((prev, curr) =>
-        Math.abs(curr - currentHeight) < Math.abs(prev - currentHeight) ? curr : prev
+      Math.abs(curr - currentHeight) < Math.abs(prev - currentHeight)
+        ? curr
+        : prev
     );
 
     if (sheetRef.current) {
@@ -172,25 +167,36 @@ export default function RecommendedCourse() {
     }
   }, [SNAP_POINTS, handleDragMove]);
 
-  const handleDragStart = useCallback((e) => {
-    if (listRef.current && listRef.current.contains(e.target) && listRef.current.scrollTop > 0) {
-      return;
-    }
-    e.preventDefault();
+  const handleDragStart = useCallback(
+    (e) => {
+      if (
+        listRef.current &&
+        listRef.current.contains(e.target) &&
+        listRef.current.scrollTop > 0
+      ) {
+        return;
+      }
+      e.preventDefault();
 
-    dragState.current = {
-      isDragging: true,
-      startY: e.touches ? e.touches[0].clientY : e.clientY,
-      startHeight: sheetRef.current.offsetHeight,
-    };
+      dragState.current = {
+        isDragging: true,
+        startY: e.touches ? e.touches[0].clientY : e.clientY,
+        startHeight: sheetRef.current.offsetHeight,
+      };
 
-    sheetRef.current.style.transition = "none";
+      sheetRef.current.style.transition = "none";
 
-    document.addEventListener("mousemove", handleDragMove, { passive: false });
-    document.addEventListener("mouseup", handleDragEnd);
-    document.addEventListener("touchmove", handleDragMove, { passive: false });
-    document.addEventListener("touchend", handleDragEnd);
-  }, [handleDragMove, handleDragEnd]);
+      document.addEventListener("mousemove", handleDragMove, {
+        passive: false,
+      });
+      document.addEventListener("mouseup", handleDragEnd);
+      document.addEventListener("touchmove", handleDragMove, {
+        passive: false,
+      });
+      document.addEventListener("touchend", handleDragEnd);
+    },
+    [handleDragMove, handleDragEnd]
+  );
 
   useEffect(() => {
     const element = dragHandleRef.current;
@@ -206,14 +212,12 @@ export default function RecommendedCourse() {
     }
   }, [handleDragStart]);
 
-  // 초기 높이: 중간 스냅으로 시작(원하면 0으로 바꿔 지도-only로 시작 가능)
   useEffect(() => {
     if (sheetRef.current) {
-      sheetRef.current.style.height = `${SNAP_POINTS[1]}px`; // mid
+      sheetRef.current.style.height = `${SNAP_POINTS[1]}px`;
     }
   }, [SNAP_POINTS]);
 
-  // ── JSON 로딩
   useEffect(() => {
     let cancelled = false;
 
@@ -237,64 +241,80 @@ export default function RecommendedCourse() {
         }, {});
 
         const built = Object.values(recommendedCourses)
-            .map((course) => {
-              const segmentIds = course.path;
-              if (!Array.isArray(segmentIds) || segmentIds.length === 0) {
-                console.warn(`Course "${course.title}" has no path segments.`);
-                return null;
-              }
+          .map((course) => {
+            const segmentIds = course.path;
+            if (!Array.isArray(segmentIds) || segmentIds.length === 0) {
+              console.warn(`Course "${course.title}" has no path segments.`);
+              return null;
+            }
 
-              let fullPath = [];
-              let allSpots = [];
-              let totalDistanceMeters = 0;
-              let totalTimeSeconds = 0;
+            let fullPath = [];
+            let allSpots = [];
+            let totalDistanceMeters = 0;
+            let totalTimeSeconds = 0;
 
-              for (const segmentId of segmentIds) {
-                const segment = segmentMap[segmentId];
-                if (segment) {
-                  fullPath = fullPath.concat(segment.path);
-                  if (Array.isArray(segment.spot)) {
-                    allSpots = allSpots.concat(segment.spot);
-                  }
-                  if (segment.summary?.totalDistance) {
-                    totalDistanceMeters += segment.summary.totalDistance;
-                  }
-                  if (segment.summary?.totalTime) {
-                    totalTimeSeconds += segment.summary.totalTime;
-                  }
-                } else {
-                  console.warn(`Segment with id "${segmentId}" not found for course "${course.title}".`);
+            for (const segmentId of segmentIds) {
+              const segment = segmentMap[segmentId];
+              if (segment) {
+                fullPath = fullPath.concat(segment.path);
+                if (Array.isArray(segment.spot)) {
+                  allSpots = allSpots.concat(segment.spot);
                 }
+                if (segment.summary?.totalDistance) {
+                  totalDistanceMeters += segment.summary.totalDistance;
+                }
+                if (segment.summary?.totalTime) {
+                  totalTimeSeconds += segment.summary.totalTime;
+                }
+              } else {
+                console.warn(
+                  `Segment with id "${segmentId}" not found for course "${course.title}".`
+                );
               }
+            }
 
-              if (fullPath.length < 2) {
-                console.warn(`Course "${course.title}" has an invalid path after processing segments.`);
-                return null;
-              }
+            if (fullPath.length < 2) {
+              console.warn(
+                `Course "${course.title}" has an invalid path after processing segments.`
+              );
+              return null;
+            }
 
-              const firstCoord = fullPath[0];
-              const lastCoord = fullPath[fullPath.length - 1];
+            const firstCoord = fullPath[0];
+            const lastCoord = fullPath[fullPath.length - 1];
 
-              const origin = { name: "출발지", lat: firstCoord[1], lng: firstCoord[0] };
-              const dest = { name: "도착지", lat: lastCoord[1], lng: lastCoord[0] };
+            const origin = {
+              name: "출발지",
+              lat: firstCoord[1],
+              lng: firstCoord[0],
+            };
+            const dest = {
+              name: "도착지",
+              lat: lastCoord[1],
+              lng: lastCoord[0],
+            };
 
-              const midSpots = allSpots
-                  .map((p) => ({ name: p.VISIT_AREA_NM, lat: p.Y_COORD, lng: p.X_COORD }))
-                  .slice(0, 2);
+            const midSpots = allSpots
+              .map((p) => ({
+                name: p.VISIT_AREA_NM,
+                lat: p.Y_COORD,
+                lng: p.X_COORD,
+              }))
+              .slice(0, 2);
 
-              return {
-                id: segmentIds.join("_"),
-                title: course.title,
-                desc1: course.description,
-                origin,
-                dest,
-                spots: midSpots,
-                path: fullPath.map(([lng, lat]) => ({ lat, lng })),
-                totalDistance: totalDistanceMeters,
-                totalTime: totalTimeSeconds,
-              };
-            })
-            .filter(Boolean);
+            return {
+              id: segmentIds.join("_"),
+              title: course.title,
+              desc1: course.description,
+              origin,
+              dest,
+              spots: midSpots,
+              path: fullPath.map(([lng, lat]) => ({ lat, lng })),
+              totalDistance: totalDistanceMeters,
+              totalTime: totalTimeSeconds,
+            };
+          })
+          .filter(Boolean);
 
         built.sort((a, b) => {
           const aIsRecommended = RECOMMENDED_COURSE_TITLES.includes(a.title);
@@ -315,7 +335,6 @@ export default function RecommendedCourse() {
     };
   }, []);
 
-  // ── 지도 초기화
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -345,13 +364,17 @@ export default function RecommendedCourse() {
     };
   }, [NAVER_KEY]);
 
-  // 지도에 코스 그리기 (맵/코스 준비된 뒤)
   useEffect(() => {
     if (!mapRef.current || !selectedCourse) return;
     drawCourse(selectedCourse);
   }, [selectedCourse?.id]);
 
-  // 위치 체크 → 시작
+  const handleConfirmStart = () => {
+    if (!selectedCourse) return;
+    dispatch(startRun(selectedCourse));
+    navigate("/run");
+  };
+
   const handleStartRunning = () => {
     setMsg("");
     if (!selectedCourse?.origin) {
@@ -364,31 +387,32 @@ export default function RecommendedCourse() {
     }
     const start = selectedCourse.origin;
     navigator.geolocation.getCurrentPosition(
-        (p) => {
-          const d =
-              getDistanceFromLatLonInKm(
-                  p.coords.latitude,
-                  p.coords.longitude,
-                  start.lat,
-                  start.lng
-              ) * 1000;
-          if (d >= 100) {
-            setAlertComponent(
-                <AlertStart
-                    onClose={() => setAlertComponent(null)}
-                    onStart={() => navigate("/run", { state: { course: selectedCourse } })}
-                />
-            );
-          } else {
-            setAlertComponent(<AlertNotStart onClose={() => setAlertComponent(null)} />);
-          }
-        },
-        (e) => setMsg(e.message || "내 위치를 가져오지 못했어요."),
-        { enableHighAccuracy: true }
+      (p) => {
+        const d =
+          getDistanceFromLatLonInKm(
+            p.coords.latitude,
+            p.coords.longitude,
+            start.lat,
+            start.lng
+          ) * 1000;
+        if (d >= 100) {
+          setAlertComponent(
+            <AlertStart
+              onClose={() => setAlertComponent(null)}
+              onStart={handleConfirmStart}
+            />
+          );
+        } else {
+          setAlertComponent(
+            <AlertNotStart onClose={() => setAlertComponent(null)} />
+          );
+        }
+      },
+      (e) => setMsg(e.message || "내 위치를 가져오지 못했어요."),
+      { enableHighAccuracy: true }
     );
   };
 
-  // ── 오버레이 관리 & 경로
   function clearOverlays() {
     const { markers, polylines } = overlaysRef.current;
     markers.forEach((m) => m.setMap?.(null));
@@ -436,8 +460,11 @@ export default function RecommendedCourse() {
     const naver = window.naver;
     if (!latlngs || latlngs.length < 4) return;
     const picks = [0.25, 0.5, 0.75]
-        .map((t) => Math.floor((latlngs.length - 1) * t))
-        .filter((i, idx, arr) => i > 0 && i < latlngs.length - 1 && arr.indexOf(i) === idx);
+      .map((t) => Math.floor((latlngs.length - 1) * t))
+      .filter(
+        (i, idx, arr) =>
+          i > 0 && i < latlngs.length - 1 && arr.indexOf(i) === idx
+      );
     picks.forEach((i) => {
       const mk = new naver.maps.Marker({
         position: latlngs[i],
@@ -462,9 +489,9 @@ export default function RecommendedCourse() {
     const map = mapRef.current;
 
     let latlngs =
-        Array.isArray(course.path) && course.path.length > 1
-            ? course.path.map((p) => new naver.maps.LatLng(p.lat, p.lng))
-            : null;
+      Array.isArray(course.path) && course.path.length > 1
+        ? course.path.map((p) => new naver.maps.LatLng(p.lat, p.lng))
+        : null;
 
     if (!latlngs) {
       const tmapPath = await fetchTmapPedestrian({
@@ -495,14 +522,14 @@ export default function RecommendedCourse() {
     overlaysRef.current.polylines.push(line);
 
     const startMarker = makeStartGoalMarker(
-        new naver.maps.LatLng(course.origin.lat, course.origin.lng),
-        course.origin.name || "출발",
-        "left"
+      new naver.maps.LatLng(course.origin.lat, course.origin.lng),
+      course.origin.name || "출발",
+      "left"
     );
     const goalMarker = makeStartGoalMarker(
-        new naver.maps.LatLng(course.dest.lat, course.dest.lng),
-        course.dest.name || "도착",
-        "right"
+      new naver.maps.LatLng(course.dest.lat, course.dest.lng),
+      course.dest.name || "도착",
+      "right"
     );
     overlaysRef.current.markers.push(startMarker, goalMarker);
 
@@ -513,193 +540,357 @@ export default function RecommendedCourse() {
 
     dropGuideDots(latlngs);
     const bounds = latlngs.reduce(
-        (b, ll) => (b.extend(ll), b),
-        new naver.maps.LatLngBounds(latlngs[0], latlngs[0])
+      (b, ll) => (b.extend(ll), b),
+      new naver.maps.LatLngBounds(latlngs[0], latlngs[0])
     );
     map.fitBounds(bounds);
   }
 
   return (
-      <div
-          className="screen"
+    <div
+      className="screen"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100vw",
+        margin: 0,
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ flex: 1, position: "relative" }}>
+        <div
+          ref={mapContainerRef}
           style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: BOTTOM_BAR_H,
+          }}
+        />
+
+        <div
+          className="floating-top"
+          style={{
+            position: "absolute",
+            top: "10px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10,
+          }}
+        >
+          {msg && <div className="toast">{msg}</div>}
+        </div>
+
+        <div
+          ref={sheetRef}
+          style={{
+            position: "absolute",
+            bottom: BOTTOM_BAR_H,
+            left: 0,
+            right: 0,
+            background: "white",
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            boxShadow: "0 -4px 12px rgba(0,0,0,0.1)",
             display: "flex",
             flexDirection: "column",
-            height: "100vh",
-            width: "100vw",
-            margin: 0,
-            overflow: "hidden",
+            boxSizing: "border-box",
+            zIndex: 5,
           }}
-      >
-        {/* 앱바는 없음 */}
-
-        <div style={{ flex: 1, position: "relative" }}>
-          {/* 지도는 하단바 높이만큼 위로 띄워 가려지지 않게 */}
+        >
           <div
-              ref={mapContainerRef}
-              style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: BOTTOM_BAR_H }}
-          />
-
-          <div
-              className="floating-top"
-              style={{
-                position: "absolute",
-                top: "10px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 10,
-              }}
+            ref={dragHandleRef}
+            style={{
+              padding: "8px 16px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              cursor: "grab",
+              flexShrink: 0,
+            }}
           >
-            {msg && <div className="toast">{msg}</div>}
+            <div
+              style={{
+                width: 46,
+                height: 4,
+                opacity: 0.4,
+                background: "#94989F",
+                borderRadius: 100,
+              }}
+            />
           </div>
 
-          {/* 코스 추천 시트: 하단바 위에 얹히고, 최대 높이를 가상 앱바에 정렬 */}
           <div
-              ref={sheetRef}
-              style={{
-                position: "absolute",
-                bottom: BOTTOM_BAR_H,
-                left: 0,
-                right: 0,
-                background: "white",
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                boxShadow: "0 -4px 12px rgba(0,0,0,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                boxSizing: "border-box",
-                zIndex: 5,
-              }}
+            ref={listRef}
+            style={{ overflowY: "auto", flex: 1, paddingBottom: 16 }}
           >
-            {/* 인디케이터: 최대 확장 시 시트 상단 === VIRTUAL_APPBAR_H 이므로
-              결과적으로 인디케이터가 '앱바 바로 위'에 위치하게 됨 */}
-            <div
-                ref={dragHandleRef}
-                style={{
-                  padding: "8px 16px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  cursor: "grab",
-                  flexShrink: 0,
-                }}
-            >
-              <div style={{ width: 46, height: 4, opacity: 0.4, background: "#94989F", borderRadius: 100 }} />
-            </div>
+            {courses.map((course, i) => {
+              const distKm = course.totalDistance / 1000;
+              const totalMinutes = Math.round(course.totalTime / 60);
+              const h = Math.floor(totalMinutes / 60);
+              const m = totalMinutes % 60;
+              const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+              const active = i === idx;
 
-            <div ref={listRef} style={{ overflowY: "auto", flex: 1, paddingBottom: 16 }}>
-              {courses.map((course, i) => {
-                const distKm = course.totalDistance / 1000;
-                const totalMinutes = Math.round(course.totalTime / 60);
-                const h = Math.floor(totalMinutes / 60);
-                const m = totalMinutes % 60;
-                const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
-                const active = i === idx;
+              const isRecommended = RECOMMENDED_COURSE_TITLES.includes(
+                course.title
+              );
+              const badgeImage = isRecommended
+                ? "/data/recommend-mark.png"
+                : "/data/porpular-mark.png";
+              const badgeAlt = isRecommended ? "추천" : "인기";
 
-                const isRecommended = RECOMMENDED_COURSE_TITLES.includes(course.title);
-                const badgeImage = isRecommended ? "/data/recommend-mark.png" : "/data/porpular-mark.png";
-                const badgeAlt = isRecommended ? "추천" : "인기";
-
-                return (
+              return (
+                <div
+                  key={course.id}
+                  onClick={() => setIdx(i)}
+                  style={{
+                    alignSelf: "stretch",
+                    padding: "8px 16px",
+                    background: active ? "#FFF4EC" : "white",
+                    borderRadius: 4,
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    display: "flex",
+                    margin: "0 8px 8px 8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      display: "flex",
+                    }}
+                  >
                     <div
-                        key={course.id}
-                        onClick={() => setIdx(i)}
-                        style={{
-                          alignSelf: "stretch",
-                          padding: "8px 16px",
-                          background: active ? "#FFF4EC" : "white",
-                          borderRadius: 4,
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          display: "flex",
-                          margin: "0 8px 8px 8px",
-                        }}
+                      style={{
+                        justifyContent: "flex-start",
+                        alignItems: "center",
+                        gap: 16,
+                        display: "flex",
+                      }}
                     >
-                      <div style={{ width: "100%", justifyContent: "space-between", alignItems: "center", display: "flex" }}>
-                        <div style={{ justifyContent: "flex-start", alignItems: "center", gap: 16, display: "flex" }}>
-                          <img style={{ width: 100, height: 100, position: "relative", borderRadius: 8 }} src="https://placehold.co/100x100" />
-                          <div style={{ flex: 1, flexDirection: "column", justifyContent: "flex-start", alignItems: "flex-start", gap: 4, display: "inline-flex" }}>
-                            <img src={badgeImage} alt={badgeAlt} style={{ height: 20, objectFit: 'contain' }} />
-                            <div style={{ flexDirection: "column", justifyContent: "flex-start", alignItems: "flex-start", gap: 6, display: "flex" }}>
-                              <div style={{ width: 177, color: "#1E1E22", fontSize: 18, fontFamily: "Pretendard", fontWeight: "700", wordWrap: "break-word", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {course.title}
+                      <img
+                        style={{
+                          width: 100,
+                          height: 100,
+                          position: "relative",
+                          borderRadius: 8,
+                        }}
+                        src="https://placehold.co/100x100"
+                      />
+                      <div
+                        style={{
+                          flex: 1,
+                          flexDirection: "column",
+                          justifyContent: "flex-start",
+                          alignItems: "flex-start",
+                          gap: 4,
+                          display: "inline-flex",
+                        }}
+                      >
+                        <img
+                          src={badgeImage}
+                          alt={badgeAlt}
+                          style={{ height: 20, objectFit: "contain" }}
+                        />
+                        <div
+                          style={{
+                            flexDirection: "column",
+                            justifyContent: "flex-start",
+                            alignItems: "flex-start",
+                            gap: 6,
+                            display: "flex",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 177,
+                              color: "#1E1E22",
+                              fontSize: 18,
+                              fontFamily: "Pretendard",
+                              fontWeight: "700",
+                              wordWrap: "break-word",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {course.title}
+                          </div>
+                          <div
+                            style={{
+                              alignSelf: "stretch",
+                              flexDirection: "column",
+                              justifyContent: "flex-start",
+                              alignItems: "flex-start",
+                              gap: 2,
+                              display: "flex",
+                            }}
+                          >
+                            <div
+                              style={{
+                                alignSelf: "stretch",
+                                color: "#626264",
+                                fontSize: 12,
+                                fontFamily: "Pretendard",
+                                fontWeight: "500",
+                                wordWrap: "break-word",
+                              }}
+                            >
+                              {course.desc1}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              justifyContent: "flex-start",
+                              alignItems: "flex-start",
+                              gap: 4,
+                              display: "inline-flex",
+                            }}
+                          >
+                            <div
+                              style={{
+                                justifyContent: "flex-start",
+                                alignItems: "center",
+                                gap: 3,
+                                display: "flex",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  position: "relative",
+                                }}
+                              >
+                                <img
+                                  src="/km.png"
+                                  style={{ width: "100%", height: "100%" }}
+                                />
                               </div>
-                              <div style={{ alignSelf: "stretch", flexDirection: "column", justifyContent: "flex-start", alignItems: "flex-start", gap: 2, display: "flex" }}>
-                                <div style={{ alignSelf: "stretch", color: "#626264", fontSize: 12, fontFamily: "Pretendard", fontWeight: "500", wordWrap: "break-word" }}>
-                                  {course.desc1}
+                              <div
+                                style={{
+                                  justifyContent: "flex-start",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  display: "flex",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    color: "#626264",
+                                    fontSize: 11,
+                                    fontFamily: "Pretendard",
+                                    fontWeight: "400",
+                                    wordWrap: "break-word",
+                                  }}
+                                >
+                                  {distKm.toFixed(2)}km
                                 </div>
                               </div>
-                              <div style={{ justifyContent: "flex-start", alignItems: "flex-start", gap: 4, display: "inline-flex" }}>
-                                <div style={{ justifyContent: "flex-start", alignItems: "center", gap: 3, display: "flex" }}>
-                                  <div style={{ width: 12, height: 12, position: "relative" }}>
-                                    <img src="/km.png" style={{ width: "100%", height: "100%" }} />
-                                  </div>
-                                  <div style={{ justifyContent: "flex-start", alignItems: "center", gap: 6, display: "flex" }}>
-                                    <div style={{ color: "#626264", fontSize: 11, fontFamily: "Pretendard", fontWeight: "400", wordWrap: "break-word" }}>
-                                      {distKm.toFixed(2)}km
-                                    </div>
-                                  </div>
-                                </div>
-                                <div style={{ justifyContent: "flex-start", alignItems: "center", gap: 3, display: "flex" }}>
-                                  <div style={{ width: 12, height: 12, position: "relative" }}>
-                                    <img src="/timer.png" style={{ width: "100%", height: "100%" }} />
-                                  </div>
-                                  <div style={{ justifyContent: "flex-start", alignItems: "center", gap: 6, display: "flex" }}>
-                                    <div style={{ color: "#626264", fontSize: 11, fontFamily: "Pretendard", fontWeight: "400", wordWrap: "break-word" }}>
-                                      예상시간 {timeStr}
-                                    </div>
-                                  </div>
+                            </div>
+                            <div
+                              style={{
+                                justifyContent: "flex-start",
+                                alignItems: "center",
+                                gap: 3,
+                                display: "flex",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  position: "relative",
+                                }}
+                              >
+                                <img
+                                  src="/timer.png"
+                                  style={{ width: "100%", height: "100%" }}
+                                />
+                              </div>
+                              <div
+                                style={{
+                                  justifyContent: "flex-start",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  display: "flex",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    color: "#626264",
+                                    fontSize: 11,
+                                    fontFamily: "Pretendard",
+                                    fontWeight: "400",
+                                    wordWrap: "break-word",
+                                  }}
+                                >
+                                  예상시간 {timeStr}
                                 </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                        {active && (
-                            <div
-                                style={{
-                                  paddingLeft: 10,
-                                  paddingRight: 10,
-                                  paddingTop: 8,
-                                  paddingBottom: 8,
-                                  background: "var(--main, #FF8C42)",
-                                  borderRadius: 100,
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  gap: 10,
-                                  display: "flex",
-                                  cursor: "pointer",
-                                }}
-                                onClick={handleStartRunning}
-                            >
-                              <div style={{ color: "#FCFCFC", fontSize: 11, fontFamily: "Pretendard", fontWeight: "600", wordWrap: "break-word" }}>
-                                달리기
-                              </div>
-                            </div>
-                        )}
                       </div>
                     </div>
-                );
-              })}
-            </div>
+                    {active && (
+                      <div
+                        style={{
+                          paddingLeft: 10,
+                          paddingRight: 10,
+                          paddingTop: 8,
+                          paddingBottom: 8,
+                          background: "var(--main, #FF8C42)",
+                          borderRadius: 100,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: 10,
+                          display: "flex",
+                          cursor: "pointer",
+                        }}
+                        onClick={handleStartRunning}
+                      >
+                        <div
+                          style={{
+                            color: "#FCFCFC",
+                            fontSize: 11,
+                            fontFamily: "Pretendard",
+                            fontWeight: "600",
+                            wordWrap: "break-word",
+                          }}
+                        >
+                          달리기
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-
-        {alertComponent}
-
-        {/* 하단바: 화면 가장자리를 꽉 채우도록 고정 */}
-        <div
-            className="bottom-bar-host"
-            style={{
-              position: "fixed",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: "100vw",
-              zIndex: 6, // 시트(5) 위에
-            }}
-        >
-          <BottomBar activeTab="running" fullWidth />
-        </div>
       </div>
+
+      {alertComponent}
+
+      <div
+        className="bottom-bar-host"
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: "100vw",
+          zIndex: 6,
+        }}
+      >
+        <BottomBar activeTab="running" fullWidth />
+      </div>
+    </div>
   );
 }

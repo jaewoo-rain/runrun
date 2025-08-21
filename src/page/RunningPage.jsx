@@ -1,15 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./MapPage.css";
-import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertArrive from "../components/AlertArrive.jsx";
 import RunningState from "../components/RunningState.jsx";
 import AlertEnd from "../components/AlertEnd.jsx";
 import useWatchLocation from "../hooks/useWatchLocation.js";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  endRun,
+  togglePause,
+  tick,
+  updateLocation,
+  addVisitedSpot,
+} from "../redux/runningSlice";
+import { getDistanceFromLatLonInKm } from "../utils/location.js";
 
 const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 
-/** 네이버 지도 스크립트 동적 로더 */
 function loadNaverMaps(clientId) {
   return new Promise((resolve, reject) => {
     if (typeof window !== "undefined" && window.naver?.maps) {
@@ -36,7 +43,6 @@ function loadNaverMaps(clientId) {
   });
 }
 
-// ✅ 화면 실측 뷰포트 사이즈 훅 (주소창 변화 대응)
 function useViewport() {
   const pick = () => ({
     w: Math.round(window.visualViewport?.width ?? window.innerWidth),
@@ -59,39 +65,40 @@ function useViewport() {
 }
 
 export default function RunningPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const course = location.state?.course;
+  const dispatch = useDispatch();
+
+  const {
+    status,
+    course,
+    elapsedTime,
+    distance,
+    calories,
+    pace,
+    userPath,
+    visitedSpots,
+  } = useSelector((state) => state.running);
 
   const [mapErr, setMapErr] = useState("");
-  const [selectedLine, setSelectedLine] = useState(null); // [[lng,lat], ...]
-  const [poiList, setPoiList] = useState([]); // [{name,lat,lng}]
-  const [visitedSpots, setVisitedSpots] = useState(new Set());
   const [arrivalAlert, setArrivalAlert] = useState(null);
   const [showEndAlert, setShowEndAlert] = useState(false);
 
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [distance, setDistance] = useState(0);
-  const [calories, setCalories] = useState(0);
-  const [pace, setPace] = useState(0);
-  const [prevLocation, setPrevLocation] = useState(null);
-  const [isPaused, setIsPaused] = useState(false);
   const { location: currentLocation } = useWatchLocation();
-  const [userPath, setUserPath] = useState([]);
 
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const polyRef = useRef(null);
   const userPolyRef = useRef(null);
   const markersRef = useRef({ start: null, end: null, me: null, poi: [] });
-
-  // 최근 지도의 자동 추적 기준점(지터 방지)
   const lastFollowPosRef = useRef(null);
-
-  // ✅ 실측 뷰포트 사이즈
   const { w: vpW, h: vpH } = useViewport();
 
-  // ✅ body 기본 여백 제거(전역 CSS 건드리지 않고)
+  useEffect(() => {
+    if (status === "idle" || !course) {
+      navigate("/", { replace: true });
+    }
+  }, [status, course, navigate]);
+
   useEffect(() => {
     const body = document.body;
     const prevMargin = body.style.margin;
@@ -104,7 +111,6 @@ export default function RunningPage() {
     };
   }, []);
 
-  // ✅ 뷰포트 변화 시 지도 리사이즈
   useEffect(() => {
     const map = mapRef.current;
     if (map && window.naver?.maps) {
@@ -112,61 +118,24 @@ export default function RunningPage() {
     }
   }, [vpW, vpH]);
 
-  // Timer effect
   useEffect(() => {
     let timer;
-    if (!isPaused && !showEndAlert) {
-      timer = setInterval(() => setElapsedTime((t) => t + 1), 1000);
+    if (status === "running") {
+      timer = setInterval(() => {
+        dispatch(tick());
+      }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isPaused, showEndAlert]);
+  }, [status, dispatch]);
 
-  // Location tracking and calculation effect (거리/칼로리/페이스)
   useEffect(() => {
-    if (!isPaused && !showEndAlert && currentLocation) {
-      setUserPath((prev) => [
-        ...prev,
-        { lat: currentLocation.latitude, lng: currentLocation.longitude },
-      ]);
-      if (prevLocation) {
-        const newDistance = getDistanceFromLatLonInKm(
-          prevLocation.latitude,
-          prevLocation.longitude,
-          currentLocation.latitude,
-          currentLocation.longitude
-        );
-        if (newDistance > 0.002) {
-          const newTotal = distance + newDistance;
-          setDistance(newTotal);
-          setCalories(newTotal * 65);
-          if (newTotal > 0) setPace(elapsedTime / 60 / newTotal);
-        }
-      }
+    if (status === "running" && currentLocation) {
+      dispatch(updateLocation(currentLocation));
     }
-    setPrevLocation(currentLocation);
-  }, [
-    currentLocation,
-    prevLocation,
-    elapsedTime,
-    isPaused,
-    showEndAlert,
-    distance,
-  ]);
+  }, [currentLocation, status, dispatch]);
 
-  // 1) 코스 데이터 처리
   useEffect(() => {
-    if (course) {
-      const line = course.path.map((p) => [p.lng, p.lat]);
-      setSelectedLine(line);
-      setPoiList(course.spots || []);
-    } else {
-      setMapErr("코스 정보를 불러오지 못했습니다.");
-    }
-  }, [course]);
-
-  // 2) 지도 초기화 & 경로/마커 그리기
-  useEffect(() => {
-    if (!selectedLine) return;
+    if (!course) return;
     let cancelled = false;
 
     const draw = async () => {
@@ -178,8 +147,12 @@ export default function RunningPage() {
         const naver = await loadNaverMaps(NAVER_KEY);
         if (cancelled) return;
 
-        const first = selectedLine[0]; // [lng,lat]
-        const startLL = new naver.maps.LatLng(first[1], first[0]);
+        const pathCoords = course.path.map(
+          (p) => new naver.maps.LatLng(p.lat, p.lng)
+        );
+        const startLL = pathCoords[0];
+        const endLL = pathCoords[pathCoords.length - 1];
+
         const map = new naver.maps.Map(mapContainerRef.current, {
           center: startLL,
           zoom: 14,
@@ -191,11 +164,8 @@ export default function RunningPage() {
         Object.values(markersRef.current).forEach((m) => m?.setMap?.(null));
         markersRef.current = { start: null, end: null, me: null, poi: [] };
 
-        const path = selectedLine.map(
-          ([lng, lat]) => new naver.maps.LatLng(lat, lng)
-        );
         polyRef.current = new naver.maps.Polyline({
-          path,
+          path: pathCoords,
           strokeColor: "#111111",
           strokeOpacity: 0.95,
           strokeWeight: 6,
@@ -203,8 +173,6 @@ export default function RunningPage() {
           map,
         });
 
-        const last = selectedLine[selectedLine.length - 1];
-        const endLL = new naver.maps.LatLng(last[1], last[0]);
         markersRef.current.start = new naver.maps.Marker({
           position: startLL,
           map,
@@ -216,9 +184,9 @@ export default function RunningPage() {
           title: "도착",
         });
 
-        const bounds = new naver.maps.LatLngBounds(path[0], path[0]);
-        path.forEach((ll) => bounds.extend(ll));
-        map.fitBounds(bounds, { top: 0, right: 0, bottom: 0, left: 0 }); // 꽉 차게
+        const bounds = new naver.maps.LatLngBounds(startLL, startLL);
+        pathCoords.forEach((ll) => bounds.extend(ll));
+        map.fitBounds(bounds, { top: 0, right: 0, bottom: 0, left: 0 });
       } catch (e) {
         console.error(e);
         setMapErr(`지도 초기화 실패: ${e.message || e}`);
@@ -232,9 +200,8 @@ export default function RunningPage() {
       Object.values(markersRef.current).forEach((m) => m?.setMap?.(null));
       markersRef.current = { start: null, end: null, me: null, poi: [] };
     };
-  }, [selectedLine]);
+  }, [course]);
 
-  // 사용자 경로 그리기
   useEffect(() => {
     const naver = window.naver?.maps;
     const map = mapRef.current;
@@ -256,7 +223,6 @@ export default function RunningPage() {
     }
   }, [userPath]);
 
-  // 3) 사용자 위치 마커(커스텀 아이콘) + 자동 따라가기 + 스팟 근접 알림(50m)
   useEffect(() => {
     const naver = window.naver?.maps;
     const map = mapRef.current;
@@ -266,7 +232,6 @@ export default function RunningPage() {
       const { latitude: lat, longitude: lng } = currentLocation;
       const here = new naver.LatLng(lat, lng);
 
-      // me 마커 최초 생성
       if (!markersRef.current.me) {
         markersRef.current.me = new naver.Marker({
           position: here,
@@ -274,20 +239,18 @@ export default function RunningPage() {
           title: "내 위치",
           zIndex: 999,
           icon: {
-            url: "/user_location.png", // public/user_location.png
+            url: "/user_location.png",
             size: new naver.Size(36, 36),
             scaledSize: new naver.Size(36, 36),
             origin: new naver.Point(0, 0),
-            anchor: new naver.Point(18, 18), // 가운데 기준
+            anchor: new naver.Point(18, 18),
           },
         });
         map.setCenter(here);
         lastFollowPosRef.current = { lat, lng };
       } else {
-        // 위치 갱신
         markersRef.current.me.setPosition(here);
 
-        // 지터 줄이기: 15m 이상 이동 시에만 따라가기
         const lp = lastFollowPosRef.current;
         if (lp) {
           const movedM =
@@ -302,12 +265,11 @@ export default function RunningPage() {
         }
       }
 
-      // 근접 스팟 알림(50m)
-      for (const p of poiList) {
-        if (visitedSpots.has(p.name) || arrivalAlert) continue;
+      for (const p of course?.spots || []) {
+        if (visitedSpots.includes(p.name) || arrivalAlert) continue;
         const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
-        if (dM >= 50) {
-          setVisitedSpots((prev) => new Set(prev).add(p.name));
+        if (dM < 50) {
+          dispatch(addVisitedSpot(p.name));
           setArrivalAlert(
             <AlertArrive
               spotName={p.name}
@@ -323,9 +285,8 @@ export default function RunningPage() {
         }
       }
     }
-  }, [currentLocation, poiList, visitedSpots, arrivalAlert]);
+  }, [currentLocation, course, visitedSpots, arrivalAlert, dispatch, navigate]);
 
-  // me 마커 정리 (언마운트 시)
   useEffect(() => {
     return () => {
       if (markersRef.current.me) {
@@ -337,6 +298,7 @@ export default function RunningPage() {
 
   const handleStopClick = () => setShowEndAlert(true);
   const handleCloseEndAlert = () => setShowEndAlert(false);
+
   const handleEndRunning = () => {
     setShowEndAlert(false);
     navigate("/finish_run", {
@@ -349,8 +311,10 @@ export default function RunningPage() {
         courseTitle: course?.title,
       },
     });
+    dispatch(endRun());
   };
-  const togglePause = () => setIsPaused(!isPaused);
+
+  const handleTogglePause = () => dispatch(togglePause());
 
   const handleRecenterClick = () => {
     const map = mapRef.current;
@@ -364,7 +328,6 @@ export default function RunningPage() {
   };
 
   return (
-    // ✅ CSS 없이 inline style로 전체 화면 고정 + 실측 높이 적용
     <div
       className="screen"
       style={{
@@ -376,7 +339,6 @@ export default function RunningPage() {
         background: "#0000",
       }}
     >
-      {/* ✅ 지도 컨테이너도 inline으로 꽉 채움 */}
       <div
         ref={mapContainerRef}
         className="map-container"
@@ -450,8 +412,8 @@ export default function RunningPage() {
       >
         <RunningState
           onStopClick={handleStopClick}
-          isPaused={isPaused}
-          togglePause={togglePause}
+          isPaused={status === "paused"}
+          togglePause={handleTogglePause}
           elapsedTime={elapsedTime}
           distance={distance}
           calories={calories}
