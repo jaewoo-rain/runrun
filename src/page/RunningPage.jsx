@@ -12,8 +12,8 @@ import {
   tick,
   updateLocation,
   addVisitedSpot,
-  setArrivedSpot, // 추가
-  clearArrivedSpot, // 추가
+  setArrivedSpot,
+  clearArrivedSpot,
 } from "../redux/runningSlice";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 
@@ -81,14 +81,20 @@ export default function RunningPage() {
     pace,
     userPath,
     visitedSpots,
-    arrivedSpotInfo, // 변경점: Redux 스토어에서 상태 가져오기
+    arrivedSpotInfo,
   } = useSelector((state) => state.running);
 
   const [mapErr, setMapErr] = useState("");
   const [arrivalAlert, setArrivalAlert] = useState(null);
-  const [showEndAlert, setShowEndAlert] = useState(false);
-  // const [arrivedSpotInfo, setArrivedSpotInfo] = useState(null); // 변경점: 이 줄을 삭제
+  const [showEndAlert, setShowEndAlert] = useState(false); // 초기값은 false로 유지
   const [isMapReady, setIsMapReady] = useState(false);
+
+  // ==================== 👇 변경된 부분 ====================
+  // 페이지 접속 시 바로 종료 알림 UI가 나타나도록 설정
+  useEffect(() => {
+    setShowEndAlert(true);
+  }, []);
+  // =======================================================
 
   const { location: currentLocation } = useWatchLocation();
 
@@ -274,9 +280,8 @@ export default function RunningPage() {
             arrivedSpotInfo.lat,
             arrivedSpotInfo.lng
           ) * 1000;
-        if (distanceFromArrivedSpot < 50) {
-          // 50m 이상 떨어지면 UI 사라짐
-          // 변경점: dispatch로 Redux 상태 업데이트
+        if (distanceFromArrivedSpot > 50) {
+          // 50m 이상 멀어지면
           dispatch(clearArrivedSpot());
         }
       }
@@ -284,10 +289,9 @@ export default function RunningPage() {
       for (const p of course?.spots || []) {
         if (visitedSpots.includes(p.name) || arrivalAlert) continue;
         const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
-        if (dM > 50) {
-          // 50m 이하 들어올 경우 스팟 알림
+        if (dM < 50) {
+          // 50m 이하로 들어올 경우
           dispatch(addVisitedSpot(p.name));
-          // 변경점: dispatch로 Redux 상태 업데이트
           dispatch(setArrivedSpot(p));
 
           setArrivalAlert(
