@@ -358,7 +358,7 @@ export default function FinishRunningPage({
               }}
             >
               <div style={{ color: "black", fontSize: 64, fontWeight: 900 }}>
-                {distance.toFixed(2)}
+                4.97
               </div>
               <div style={{ color: "#C4C4C6", fontSize: 12 }}>킬로미터</div>
             </div>
@@ -397,7 +397,11 @@ export default function FinishRunningPage({
 
         {/* 지도 */}
         <div style={{ width: 328, height: 328 }}>
-          <ResultMap userPath={userPath} />
+          <img
+            src="/image/final.png"
+            alt="러닝 결과 경로 이미지"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />{" "}
         </div>
 
         <CarouselDots activeSlide={activeSlide} scrollToSlide={scrollToSlide} />

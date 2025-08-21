@@ -77,7 +77,7 @@ export default function MissionCertificate({
           lineHeight: "28.8px",
         }}
       >
-        해돋이러너, 000
+        해돋이러너, 양재우
       </div>
       <div
         style={{
@@ -93,7 +93,7 @@ export default function MissionCertificate({
         }}
       >
         {courseTitle}부터, <br />
-        {distance.toFixed(2)}km 를 완주한 당신
+        4.97km 를 완주한 당신
         <br />
         제주도가 임명하는 ‘해돋이러너’로 임명합니다!
       </div>
