@@ -95,7 +95,6 @@ export default function RunningPage() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const polyRef = useRef(null);
-  const userPolyRef = useRef(null);
   const markersRef = useRef({ start: null, end: null, me: null, poi: [] });
   const lastFollowPosRef = useRef(null);
   const { w: vpW, h: vpH } = useViewport();
@@ -223,26 +222,7 @@ export default function RunningPage() {
     };
   }, [course]);
 
-  useEffect(() => {
-    const naver = window.naver?.maps;
-    const map = mapRef.current;
-    if (!naver || !map || userPath.length < 2) return;
-
-    const pathCoords = userPath.map((p) => new naver.LatLng(p.lat, p.lng));
-
-    if (!userPolyRef.current) {
-      userPolyRef.current = new naver.Polyline({
-        path: pathCoords,
-        strokeColor: "#FF8C42",
-        strokeOpacity: 0.8,
-        strokeWeight: 8,
-        zIndex: 100,
-        map: map,
-      });
-    } else {
-      userPolyRef.current.setPath(pathCoords);
-    }
-  }, [userPath]);
+  
 
   useEffect(() => {
     if (!isMapReady) {
