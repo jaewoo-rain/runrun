@@ -38,7 +38,11 @@ const CarouselDots = ({ activeSlide, scrollToSlide }) => (
   </div>
 );
 
-export default function MissionCertificate({ data, activeSlide, scrollToSlide }) {
+export default function MissionCertificate({
+  data,
+  activeSlide,
+  scrollToSlide,
+}) {
   const { distance, courseTitle } = data || {
     distance: 0,
     courseTitle: "코스",
@@ -109,50 +113,6 @@ export default function MissionCertificate({ data, activeSlide, scrollToSlide })
         제주특별자치도가 <br />
         인증하는
       </div>
-
-      
-
-      {/* 하단 아이콘들 (대체용) */}
-      <div
-        style={{
-          width: 46.08,
-          height: 47.29,
-          left: 238.08,
-          top: 642.36,
-          position: "absolute",
-          background: "#323238",
-        }}
-      />
-      <div
-        style={{
-          width: 23.7,
-          height: 18.92,
-          left: 249.6,
-          top: 656.72,
-          position: "absolute",
-          background: "white",
-        }}
-      />
-      <div
-        style={{
-          width: 46.08,
-          height: 47.29,
-          left: 184.32,
-          top: 642.36,
-          position: "absolute",
-          background: "#323238",
-        }}
-      />
-      <div
-        style={{
-          width: 23.18,
-          height: 23.65,
-          left: 195.84,
-          top: 654.19,
-          position: "absolute",
-          background: "white",
-        }}
-      />
 
       {/* 중앙 배지 (이미지) */}
       <img

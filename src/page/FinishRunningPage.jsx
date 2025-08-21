@@ -54,7 +54,9 @@ const ResultMap = ({ userPath }) => {
           return;
         }
 
-        const pathCoords = userPath.map((p) => new naver.maps.LatLng(p.lat, p.lng));
+        const pathCoords = userPath.map(
+          (p) => new naver.maps.LatLng(p.lat, p.lng)
+        );
 
         new naver.maps.Polyline({
           path: pathCoords,
@@ -83,7 +85,9 @@ const ResultMap = ({ userPath }) => {
     loadAndDrawMap();
   }, [userPath]);
 
-  return <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
+  );
 };
 
 const formatTime = (timeInSeconds) => {
@@ -287,15 +291,20 @@ const CarouselDots = ({ activeSlide, scrollToSlide }) => (
   </div>
 );
 
-export default function FinishRunningPage({ data, activeSlide, scrollToSlide }) {
-  const { elapsedTime, distance, calories, pace, userPath, courseTitle } = data || {
-    elapsedTime: 0,
-    distance: 0,
-    calories: 0,
-    pace: 0,
-    userPath: [],
-    courseTitle: "코스 정보 없음",
-  };
+export default function FinishRunningPage({
+  data,
+  activeSlide,
+  scrollToSlide,
+}) {
+  const { elapsedTime, distance, calories, pace, userPath, courseTitle } =
+    data || {
+      elapsedTime: 0,
+      distance: 0,
+      calories: 0,
+      pace: 0,
+      userPath: [],
+      courseTitle: "코스 정보 없음",
+    };
 
   useEffect(() => {
     console.log("테스트용 사용자 경로 데이터:", userPath);
@@ -334,15 +343,12 @@ export default function FinishRunningPage({ data, activeSlide, scrollToSlide }) 
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ color: "#C4C4C6", fontSize: 12, fontWeight: 500 }}>
-              오늘 - 오전 7 : 40
-            </div>
             <div style={{ color: "black", fontSize: 22, fontWeight: 600 }}>
               {courseTitle || "알 수 없는 코스"}
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 19 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div
               style={{
                 width: 132,
@@ -357,12 +363,13 @@ export default function FinishRunningPage({ data, activeSlide, scrollToSlide }) 
               <div style={{ color: "#C4C4C6", fontSize: 12 }}>킬로미터</div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 54 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 35 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <div
                   style={{ color: "#1E1E22", fontSize: 22, fontWeight: 600 }}
                 >
-                  {formatPace(pace)}
+                  {/* {formatPace(pace)} */}
+                  6'32''
                 </div>
                 <div style={{ color: "#C4C4C6", fontSize: 12 }}>페이스</div>
               </div>
@@ -370,7 +377,8 @@ export default function FinishRunningPage({ data, activeSlide, scrollToSlide }) 
                 <div
                   style={{ color: "#1E1E22", fontSize: 22, fontWeight: 600 }}
                 >
-                  {formatTime(elapsedTime)}
+                  {/* {formatTime(elapsedTime)} */}
+                  33:09
                 </div>
                 <div style={{ color: "#C4C4C6", fontSize: 12 }}>시간</div>
               </div>
@@ -378,7 +386,8 @@ export default function FinishRunningPage({ data, activeSlide, scrollToSlide }) 
                 <div
                   style={{ color: "#1E1E22", fontSize: 22, fontWeight: 600 }}
                 >
-                  {Math.round(calories)}
+                  {/* {Math.round(calories)} */}
+                  277
                 </div>
                 <div style={{ color: "#C4C4C6", fontSize: 12 }}>칼로리</div>
               </div>
