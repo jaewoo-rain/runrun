@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function CameraCaptureMobile({
   nickname = "러너닉네임",
@@ -6,7 +7,9 @@ export default function CameraCaptureMobile({
   initialFacing = "environment",
   onComplete,
   onNext,
+  stories = [],
 }) {
+  const navigate = useNavigate();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -16,10 +19,16 @@ export default function CameraCaptureMobile({
   const [photoBlob, setPhotoBlob] = useState(null);
   const [error, setError] = useState("");
 
-  // camera → preview → typing → typed → sent
-  const [step, setStep] = useState("camera");
+  const [step, setStep] = useState("camera"); // camera, preview, typing, typed, sending
   const [message, setMessage] = useState("");
   const CHAR_LIMIT = 48;
+
+  const [isFlashOn, setIsFlashOn] = useState(false);
+  const [isFlashSupported, setIsFlashSupported] = useState(false);
+
+  const handleClose = () => {
+    navigate(-1);
+  };
 
   const stopStream = () => {
     try {
@@ -60,8 +69,22 @@ export default function CameraCaptureMobile({
     return wantFront ? videos[videos.length - 1].deviceId : videos[0].deviceId;
   };
 
+  const checkFlashSupport = (stream) => {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack && "getCapabilities" in videoTrack) {
+      const capabilities = videoTrack.getCapabilities();
+      if (capabilities.torch) {
+        setIsFlashSupported(true);
+        return;
+      }
+    }
+    setIsFlashSupported(false);
+    setIsFlashOn(false);
+  };
+
   const attachStream = async (s) => {
     setStream(s);
+    checkFlashSupport(s);
     const v = videoRef.current;
     if (!v) return;
     v.srcObject = s;
@@ -72,6 +95,7 @@ export default function CameraCaptureMobile({
 
   const startCamera = async (mode = facingMode) => {
     setError("");
+    setIsFlashSupported(false);
     try {
       stopStream();
       // 1) exact
@@ -117,7 +141,11 @@ export default function CameraCaptureMobile({
       throw new Error("적합한 카메라를 찾을 수 없습니다.");
     } catch (e) {
       console.error(e);
-      setError("카메라를 시작할 수 없어요. 권한/브라우저 지원을 확인하세요.");
+      if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+        setError("카메라 권한이 필요해요. 브라우저 설정에서 허용해주세요.");
+      } else {
+        setError("카메라를 시작할 수 없어요. 권한/브라우저 지원을 확인하세요.");
+      }
     }
   };
 
@@ -125,6 +153,19 @@ export default function CameraCaptureMobile({
     const next = facingMode === "environment" ? "user" : "environment";
     setFacingMode(next);
     await startCamera(next);
+  };
+
+  const toggleFlash = async () => {
+    if (!stream || !isFlashSupported) return;
+    const videoTrack = stream.getVideoTracks()[0];
+    try {
+      await videoTrack.applyConstraints({
+        advanced: [{ torch: !isFlashOn }],
+      });
+      setIsFlashOn(!isFlashOn);
+    } catch (e) {
+      console.error("플래시를 제어할 수 없습니다.", e);
+    }
   };
 
   const capturePhoto = () => {
@@ -153,7 +194,8 @@ export default function CameraCaptureMobile({
   };
 
   const handleSend = async () => {
-    if (!photoBlob) return;
+    if (!photoBlob || step === "sending") return;
+    setStep("sending");
     const payload = {
       author: nickname,
       timeAgo: "방금",
@@ -164,21 +206,7 @@ export default function CameraCaptureMobile({
       createdAt: new Date().toISOString(),
       locationName,
     };
-    setStep("sent");
-    onComplete?.(payload);
-  };
-
-  const handleNext = () => {
-    const payload = {
-      author: nickname,
-      timeAgo: "방금",
-      photoBlob,
-      photoUrl,
-      caption: message,
-      facingMode,
-      createdAt: new Date().toISOString(),
-      locationName,
-    };
+    await onComplete?.(payload);
     onNext?.(payload);
   };
 
@@ -204,76 +232,69 @@ export default function CameraCaptureMobile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ===== Styles (반응형) =====
+  const isPreviewing = step !== "camera";
+
+  // ===== Styles =====
   const root = {
     position: "fixed",
     inset: 0,
     width: "100vw",
-    height: "100dvh", // 모바일 주소창 수축/확장 대응
+    height: "100dvh",
     background: "black",
     overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   };
-  const statusBar = {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: "100%",
-    height: 44,
-    background: "black",
+
+  const header = {
+    display: "flex",
+    justifyContent: isPreviewing ? "center" : "space-between",
+    alignItems: "center",
+    padding: "12px 15px",
+    paddingTop: 56,
+    flexShrink: 0,
     color: "white",
+    zIndex: 15,
+    position: "relative",
+  };
+
+  const previewHeaderPill = {
     display: "flex",
     alignItems: "center",
-    padding: "12px 18px",
-    boxSizing: "border-box",
+    gap: 8,
+    background: "rgba(30,30,30,0.85)",
+    padding: "8px 16px",
+    borderRadius: 999,
+    fontSize: 14,
     fontWeight: 600,
-    zIndex: 5,
-  };
-  const homeIndicator = {
-    position: "absolute",
-    bottom: 8,
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: 129,
-    height: 4.5,
-    background: "white",
-    borderRadius: 90,
   };
 
-  const pinIcon = (
-    <div style={{ width: 20, height: 24, position: "relative" }}>
-      <div
-        style={{
-          width: 20,
-          height: 24,
-          position: "absolute",
-          background: "#FF8C42",
-          borderRadius: 4,
-        }}
-      />
-      <div
-        style={{
-          width: 6.5,
-          height: 6.5,
-          position: "absolute",
-          left: 7,
-          top: 6.5,
-          background: "white",
-          borderRadius: 999,
-        }}
-      />
-    </div>
-  );
+  const locationInfo = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 20,
+    fontWeight: 700,
+  };
+
+  const cameraHeaderRight = {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+  };
 
   const viewportWrap = {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 57,
-    bottom: 120, // 하단 버튼 영역 확보
+    flex: 1,
+    margin: "0 10px",
+    position: "relative",
     overflow: "hidden",
     borderRadius: 40,
-    background: "#000",
+    background: "#333",
   };
+
   const topControls = {
     position: "absolute",
     top: 16,
@@ -284,6 +305,27 @@ export default function CameraCaptureMobile({
     alignItems: "center",
     zIndex: 3,
   };
+
+  const previewCloseButton = {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    background: "rgba(0,0,0,0.5)",
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+    userSelect: "none",
+    zIndex: 10,
+    color: "white",
+    fontSize: 20,
+    lineHeight: "40px",
+    textAlign: "center",
+    border: "1px solid rgba(255,255,255,0.1)",
+  };
+
   const roundIcon = {
     width: 40,
     height: 40,
@@ -295,23 +337,29 @@ export default function CameraCaptureMobile({
     cursor: "pointer",
     userSelect: "none",
   };
+
+  const shutterContainer = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: 100,
+    flexShrink: 0,
+    zIndex: 10,
+    marginTop: -50,
+  };
+
   const shutterRing = {
-    position: "absolute",
-    bottom: 28,
-    left: "50%",
-    transform: "translateX(-50%)",
     width: 82,
     height: 82,
     borderRadius: 999,
     border: "5px solid #FF8C42",
     background: "white",
     cursor: "pointer",
+    boxSizing: "content-box",
   };
+
   const orangeFab = {
-    position: "absolute",
-    bottom: 28,
-    left: "50%",
-    transform: "translateX(-50%)",
     width: 82,
     height: 82,
     background: "#FF8C42",
@@ -319,32 +367,147 @@ export default function CameraCaptureMobile({
     cursor: "pointer",
     display: "grid",
     placeItems: "center",
+    boxSizing: "content-box",
   };
-  const bubble = {
-    padding: "10px 12px",
+
+  const feedFooter = {
+    flexShrink: 0,
+    padding: "10px 16px 20px",
+    color: "white",
+    textAlign: "center",
+    cursor: "pointer",
+    zIndex: 5,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  };
+
+  const feedThumbnail = {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    objectFit: "cover",
+    border: "1px solid rgba(255, 255, 255, 0.5)",
+  };
+
+  const messageUiContainerBase = {
     position: "absolute",
     left: "50%",
     transform: "translateX(-50%)",
-    bottom: 120,
-    background: "rgba(255,255,255,0.85)",
-    boxShadow: "0px 1px 4px rgba(12,12,13,0.05)",
-    borderRadius: 12,
-    border: "1px solid rgba(0,0,0,0.06)",
-    color: "black",
-    fontSize: 14,
-    fontWeight: 700,
-    textAlign: "center",
+    zIndex: 10,
+    bottom: 150, // 위치 조정
   };
+
+  const addMessageButton = {
+    ...messageUiContainerBase,
+    background: "rgba(255,255,255,0.95)",
+    color: "#111",
+    padding: "10px 18px",
+    borderRadius: 12,
+    border: "none",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+
+  // ✅ [수정됨] 메시지 말풍선 스타일
+  const messageDisplayBubble = {
+    ...messageUiContainerBase,
+    background: "rgba(255,255,255,0.5)",
+    padding: "10px 16px",
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    maxWidth: "80%",
+    textAlign: "center",
+    wordBreak: "break-word",
+    backdropFilter: "blur(5px)", // 블러 효과
+  };
+
+  const typingUiContainer = {
+    ...messageUiContainerBase,
+    width: "calc(100% - 32px)", // 좌우 여백 16px
+    background: "rgba(255,255,255,0.9)",
+    borderRadius: 16,
+    padding: 10,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    boxSizing: "border-box",
+  };
+
+  const typingInput = {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#111",
+  };
+
+  const typingCompleteButton = {
+    background: "transparent",
+    border: "none",
+    fontSize: 13,
+    fontWeight: 700,
+    color: "#FF8C42",
+    cursor: "pointer",
+  };
+
+  // ===== Icons =====
+  const pinIcon = (
+    <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+      <path
+        d="M10 0C4.48 0 0 4.48 0 10C0 15.52 10 24 10 24C10 24 20 15.52 20 10C20 4.48 15.52 0 10 0ZM10 13.5C8.07 13.5 6.5 11.93 6.5 10C6.5 8.07 8.07 6.5 10 6.5C11.93 6.5 13.5 8.07 13.5 10C13.5 11.93 11.93 13.5 10 13.5Z"
+        fill="#FF8C42"
+      />
+    </svg>
+  );
+
+  const personIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"
+        fill="white"
+      />
+    </svg>
+  );
+
+  const firstStoryImage = stories[0]?.imageSrc;
 
   return (
     <div style={root}>
-      <div style={statusBar}>
-        {pinIcon}
-        <div style={{ color: "white", fontSize: 24, fontWeight: 700 }}>
-          {locationName}
-        </div>
-      </div>
+      {/* ===== HEADER ===== */}
+      <header style={header}>
+        {isPreviewing ? (
+          <div style={previewHeaderPill}>
+            {personIcon}
+            <span>& {locationName} 러너 32명</span>
+          </div>
+        ) : (
+          <>
+            <div style={locationInfo}>
+              {pinIcon}
+              <span>{locationName}</span>
+            </div>
+            <div style={cameraHeaderRight} onClick={handleClose}>
+              <span>40:08</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z"
+                  fill="white"
+                />
+              </svg>
+            </div>
+          </>
+        )}
+      </header>
 
+      {/* ===== VIEWPORT ===== */}
       <div style={viewportWrap}>
         {step === "camera" ? (
           <video
@@ -364,18 +527,28 @@ export default function CameraCaptureMobile({
           )
         )}
 
-        <div style={topControls}>
-          <div style={roundIcon} title="플래시">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"
-                stroke="white"
-                strokeWidth="1.6"
-                fill="none"
-              />
-            </svg>
-          </div>
-          {step === "camera" ? (
+        {step === "camera" && (
+          <div style={topControls}>
+            <div
+              style={{
+                ...roundIcon,
+                visibility:
+                  isFlashSupported && facingMode === "environment"
+                    ? "visible"
+                    : "hidden",
+              }}
+              title="플래시"
+              onClick={toggleFlash}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"
+                  stroke="white"
+                  strokeWidth="1.6"
+                  fill={isFlashOn ? "white" : "none"}
+                />
+              </svg>
+            </div>
             <div style={roundIcon} onClick={switchCamera} title="카메라 전환">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <path
@@ -404,164 +577,108 @@ export default function CameraCaptureMobile({
                 />
               </svg>
             </div>
-          ) : (
-            <div
-              style={{
-                ...roundIcon,
-                background: "rgba(255,255,255,0.85)",
-                color: "#111",
-              }}
-              onClick={resetAll}
-              title="닫기"
-            >
+          </div>
+        )}
+
+        {isPreviewing && (
+          <>
+            <div style={previewCloseButton} onClick={resetAll} title="닫기">
               ✕
             </div>
-          )}
-        </div>
 
-        {step === "preview" && (
-          <button
-            onClick={() => setStep("typing")}
-            style={{
-              position: "absolute",
-              left: "50%",
-              transform: "translateX(-50%)", // ✅ 오타 수정
-              bottom: 120,
-              background: "rgba(255,255,255,0.85)",
-              color: "#111",
-              padding: "8px 14px",
-              borderRadius: 999,
-              border: "1px solid rgba(0,0,0,0.06)",
-              fontSize: 14,
-              cursor: "pointer",
-            }}
-          >
-            메시지 추가
-          </button>
+            {step !== "typing" && !message && (
+              <button
+                onClick={() => setStep("typing")}
+                style={addMessageButton}
+              >
+                메시지 추가
+              </button>
+            )}
+
+            {step === "typed" && message && (
+              <div
+                onClick={() => setStep("typing")}
+                style={messageDisplayBubble}
+                title="메시지 수정"
+              >
+                {message}
+              </div>
+            )}
+          </>
         )}
 
         {step === "typing" && (
-          <div
-            style={{
-              position: "absolute",
-              left: 16,
-              right: 16,
-              bottom: 120,
-              background: "rgba(255,255,255,0.9)",
-              borderRadius: 16,
-              padding: 10,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
+          <div style={typingUiContainer}>
             <input
               autoFocus
               type="text"
-              placeholder="이 순간을 한 줄로 (최대 48자)"
+              placeholder={`이 순간을 한 줄로 (최대 ${CHAR_LIMIT}자)`}
               value={message}
               onChange={(e) => setMessage(e.target.value.slice(0, CHAR_LIMIT))}
-              onKeyDown={(e) => e.key === "Enter" && setStep("typed")}
-              style={{
-                flex: 1,
-                border: "none",
-                outline: "none",
-                background: "transparent",
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#111",
-              }}
+              onKeyDown={(e) =>
+                e.key === "Enter" && setStep(message ? "typed" : "preview")
+              }
+              style={typingInput}
             />
             <button
-              onClick={() => setStep("typed")}
-              style={{
-                background: "transparent",
-                border: "none",
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#FF8C42",
-                cursor: "pointer",
-              }}
+              onClick={() => setStep(message ? "typed" : "preview")}
+              style={typingCompleteButton}
             >
               완료
             </button>
           </div>
         )}
+      </div>
 
-        {step === "typed" && !!message && (
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              transform: "translateX(-50%)",
-              bottom: 120,
-              padding: "10px 14px",
-              background: "rgba(255,255,255,0.30)",
-              borderRadius: 20,
-              backdropFilter: "blur(2px)",
-              color: "black",
-              fontSize: 15,
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              maxWidth: 320,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-            title={message}
-          >
-            {message}
-          </div>
-        )}
-
-        {step === "sent" && (
-          <div style={bubble}>
-            업로드 완료! <br />
-            오른쪽으로 넘겨 다른 러너의 스토리를 확인해 보세요.
-          </div>
+      {/* ===== BOTTOM CONTROLS (Shutter/Send) ===== */}
+      <div style={shutterContainer}>
+        {step === "camera" ? (
+          <div style={shutterRing} onClick={capturePhoto} title="사진 찍기" />
+        ) : (
+          isPreviewing && (
+            <div
+              style={{ ...orangeFab, opacity: step === "sending" ? 0.6 : 1 }}
+              onClick={handleSend}
+              title="사진 보내기"
+            >
+              {step === "sending" ? (
+                <span style={{ color: "white", fontSize: 16, fontWeight: 800 }}>
+                  전송 중...
+                </span>
+              ) : (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 11l18-8-8 18-2-7-8-3z"
+                    stroke="white"
+                    strokeWidth="1.8"
+                    fill="none"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
+          )
         )}
       </div>
 
-      {/* 하단 중앙 버튼 */}
-      {step === "camera" ? (
-        <div style={shutterRing} onClick={capturePhoto} title="사진 찍기" />
-      ) : step === "sent" ? (
-        <div style={orangeFab} onClick={handleNext} title="다음">
-          <span
-            style={{
-              color: "white",
-              fontSize: 16,
-              fontWeight: 800,
-              letterSpacing: 1,
-            }}
-          >
-            다음
-          </span>
+      {/* ===== FOOTER ===== */}
+      <footer style={feedFooter} onClick={() => navigate("/story-feed")}>
+        {firstStoryImage && (
+          <img src={firstStoryImage} alt="feed preview" style={feedThumbnail} />
+        )}
+        <div style={{ display: "inline-block", lineHeight: 1.2 }}>
+          다른 러너들의 기록
+          <div style={{ fontSize: 24, marginTop: 4 }}>ˇ</div>
         </div>
-      ) : (
-        <div style={orangeFab} onClick={handleSend} title="사진 보내기">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M3 11l18-8-8 18-2-7-8-3z"
-              stroke="white"
-              strokeWidth="1.8"
-              fill="none"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      )}
-
-      <div style={homeIndicator} />
+      </footer>
 
       {error && (
         <div
           style={{
-            position: "absolute",
-            left: 12,
-            right: 12,
-            bottom: 8,
             color: "#fca5a5",
             fontSize: 12,
+            textAlign: "center",
+            padding: "0 12px 8px",
           }}
         >
           {error}
