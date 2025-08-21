@@ -16,6 +16,7 @@ import {
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 
 const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
+const LOC_ICON_URL = "/location.png";
 
 function loadNaverMaps(clientId) {
   return new Promise((resolve, reject) => {
@@ -165,22 +166,34 @@ export default function RunningPage() {
 
         polyRef.current = new naver.maps.Polyline({
           path: pathCoords,
-          strokeColor: "#111111",
+          strokeColor: "#FF8C42",
           strokeOpacity: 0.95,
           strokeWeight: 6,
           zIndex: 60,
           map,
         });
 
+        // 변경점: 출발/도착 마커 아이콘을 URL 대신 HTML content로 설정합니다.
+        const markerIcon = {
+          content: `<div style="width:28px; height:28px; background-image:url(${LOC_ICON_URL}); background-size:contain; background-repeat:no-repeat; background-position:center;"></div>`,
+          size: new naver.maps.Size(28, 28),
+          anchor: new naver.maps.Point(14, 28),
+        };
+
         markersRef.current.start = new naver.maps.Marker({
           position: startLL,
           map,
           title: "출발",
+          icon: markerIcon,
+          zIndex: 100,
         });
+
         markersRef.current.end = new naver.maps.Marker({
           position: endLL,
           map,
           title: "도착",
+          icon: markerIcon,
+          zIndex: 100,
         });
 
         const bounds = new naver.maps.LatLngBounds(startLL, startLL);
@@ -281,7 +294,7 @@ export default function RunningPage() {
 
   const handleEndRunning = () => {
     setShowEndAlert(false);
-    navigate("/run-result", {
+    navigate("/finish_run", {
       state: {
         elapsedTime,
         distance,
